@@ -3,6 +3,13 @@
 > **Uso interno Abbott.** Este pacote contém só lógica (consultas, medidas, tema e layout), nenhum dado.
 > O arquivo `.pbix` guarda dados importados e **não deve ficar em repositório público**.
 
+## Arquivo pronto: `FaturasEndolog_Executivo.pbix` (na raiz do repositório)
+
+É o mesmo relatório, com o **layout novo já aplicado**: tema Abbott, faixa azul-marinho com o logo, grade alinhada, títulos corrigidos, páginas com problema ocultas e 7 visuais personalizados não usados removidos.
+**O modelo de dados não foi alterado**: mesmas consultas, medidas e relações. Por isso os números são os mesmos de hoje.
+As correções de cálculo (dólar, preço médio, calendário) entram quando você aplicar os arquivos `01` e `02` seguindo o guia abaixo.
+O original `FaturasEndolog.pbix` continua no repositório, sem mudanças.
+
 ## O que tem aqui
 
 | Arquivo | O que é |
