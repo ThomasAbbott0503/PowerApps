@@ -34,7 +34,7 @@ As páginas antigas *Saídas Logmed* e *validações* não entraram: usavam tabe
 | Meses com erro de digitação ("Jeneiro", "MAIO ", "SETEMBRO") sumiam dos filtros | Função `fxMes` padroniza (maiúsculas, espaços, abreviações) |
 | Valores em texto ("R$ 1.234,56", "R$ 150.00", "0,10%", "R$ -") dependiam do locale | Função `fxNumero` converte todos os formatos; vazio/traço vira 0 |
 | Gráfico somava o **preço unitário** | Medida **Preço Médio** (Cobrado ÷ Qtde) |
-| Medidas `tpmoeda` devolviam texto (quebravam totais) | Devolvem número com **formato dinâmico** R$/US$ |
+| Medidas `tpmoeda` devolviam texto (quebravam totais) | **Grupo de cálculo `TipoMoeda`** (Real / Dolar): o botão R$ \| US$ converte e formata todas as medidas de valor de uma vez, pelo PTAX do mês |
 | Filiais digitadas à mão | Lista automática a partir dos dados |
 | 5 leituras do site inteiro do SharePoint | 1 consulta-base `PastaFaturas` + função `fxLerAba` |
 

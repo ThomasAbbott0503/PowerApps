@@ -1,16 +1,46 @@
 table TipoMoeda
 
+	calculationGroup
+		precedence: 0
+
+		calculationItem Real = SELECTEDMEASURE()
+			ordinal: 0
+			formatStringDefinition = SELECTEDMEASUREFORMATSTRING()
+
+		calculationItem Dolar = ```
+				VAR _taxaE = DIVIDE ( [VALORREAL], [VALORDOLAR] )
+				VAR _taxaL = DIVIDE ( [valorreallog], [ValorEmUSDlogmed] )
+				VAR _taxaT = DIVIDE ( [VALORREAL] + [valorreallog], [VALORDOLAR] + [ValorEmUSDlogmed] )
+				RETURN
+				    SWITCH (
+				        TRUE (),
+				        ISSELECTEDMEASURE ( [VALORREAL], [Valor Mês Anterior Endolog], [Acumulado Ano Endolog], [Preço Médio Endolog] ), DIVIDE ( SELECTEDMEASURE (), _taxaE ),
+				        ISSELECTEDMEASURE ( [valorreallog], [Valor Mês Anterior LOGMED], [Acumulado Ano LOGMED], [Preço Médio LOGMED] ), DIVIDE ( SELECTEDMEASURE (), _taxaL ),
+				        ISSELECTEDMEASURE ( [Total Faturado] ), DIVIDE ( SELECTEDMEASURE (), _taxaT ),
+				        SELECTEDMEASURE ()
+				    )
+				```
+			ordinal: 1
+			formatStringDefinition = ```
+				SWITCH (
+				    TRUE (),
+				    ISSELECTEDMEASURE ( [Preço Médio Endolog], [Preço Médio LOGMED] ), """US$"" #,0.00",
+				    ISSELECTEDMEASURE ( [VALORREAL], [valorreallog], [Valor Mês Anterior Endolog], [Valor Mês Anterior LOGMED], [Acumulado Ano Endolog], [Acumulado Ano LOGMED], [Total Faturado] ), """US$"" #,0",
+				    SELECTEDMEASUREFORMATSTRING ()
+				)
+				```
+
 	column Moeda
 		dataType: string
 		summarizeBy: none
-		sourceColumn: Moeda
+		sourceColumn: Name
+		sortByColumn: Ordinal
 
-	partition TipoMoeda = m
+	column Ordinal
+		dataType: int64
+		isHidden
+		summarizeBy: none
+		sourceColumn: Ordinal
+
+	partition TipoMoeda = calculationGroup
 		mode: import
-		source =
-				let
-				    Fonte = #table(type table [Moeda = text], {{"Real"}, {"Dolar"}})
-				in
-				    Fonte
-
-	annotation PBI_ResultType = Table

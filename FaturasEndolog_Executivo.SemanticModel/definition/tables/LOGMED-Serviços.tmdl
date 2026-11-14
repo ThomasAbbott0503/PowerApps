@@ -6,10 +6,6 @@ table 'LOGMED-Serviços'
 	measure ValorEmUSDlogmed = SUMX ( VALUES ( dDATAS[Data] ), DIVIDE ( [valorreallog], CALCULATE ( MAX ( dDATAS[PTAX] ) ) ) )
 		formatString: "US$"\ #,0;-"US$"\ #,0;"US$"\ #,0
 
-	measure tpmoedalog = IF ( SELECTEDVALUE ( TipoMoeda[Moeda], "Real" ) = "Real", [valorreallog], [ValorEmUSDlogmed] )
-		formatString: "R$"\ #,0;-"R$"\ #,0;"R$"\ #,0
-		formatStringDefinition = IF ( SELECTEDVALUE ( TipoMoeda[Moeda], "Real" ) = "Real", """R$"" #,0", """US$"" #,0" )
-
 	measure 'Qtde Serviços LOGMED' = SUM ( 'LOGMED-Serviços'[Quantidade] )
 		formatString: #,0
 

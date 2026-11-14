@@ -6,7 +6,7 @@ SRC, OUT, THEME, REPORT_JSON = sys.argv[1:5]
 
 # ---------- carrega definições M e medidas do gerador TMDL (sem executar a gravação) ----------
 src = open(os.path.join(os.path.dirname(__file__), "gerar_modelo.py"), encoding="utf-8").read()
-src = src.split("# ----------------------------------------------------------------- TMDL helpers")[0]
+src = src.split("# ----------------------------------------------------------------- TMDL helpers")[0] + "\n" + src[src.index("CG_DOLAR = "):src.index("tm = (")]
 src = src.replace('OUT = sys.argv[1]', 'OUT = "/tmp/_x"').replace('os.makedirs(os.path.join(D, "tables"), exist_ok=True)', '').replace('os.makedirs(os.path.join(D, "cultures"), exist_ok=True)', '')
 ns = {}; exec(src, ns)
 
@@ -33,7 +33,6 @@ VAR_FMT = "▲ 0.0%;▼ 0.0%;0.0%"
 mes_endolog = [
     meas("VALORREAL", f"SUM ( {F}[COBRADO] )", BRL),
     meas("VALORDOLAR", "SUMX ( VALUES ( dDATAS[Data] ), DIVIDE ( [VALORREAL], CALCULATE ( MAX ( dDATAS[PTAX] ) ) ) )", USD),
-    meas("tpmoeda", 'IF ( SELECTEDVALUE ( TipoMoeda[Moeda], "Real" ) = "Real", [VALORREAL], [VALORDOLAR] )', BRL, DYN),
     meas("Qtde Serviços Endolog", f"SUM ( {F}[QTDE] )", "#,0"),
     meas("Preço Médio Endolog", "DIVIDE ( [VALORREAL], [Qtde Serviços Endolog] )", BRL2),
     meas("Valor Mês Anterior Endolog", "VAR _d = MAX ( dDATAS[Data] ) RETURN CALCULATE ( [VALORREAL], REMOVEFILTERS ( dDATAS ), dDATAS[Data] = EDATE ( _d, -1 ) )", BRL),
@@ -41,7 +40,6 @@ mes_endolog = [
     meas("Cor Var Endolog", 'IF ( [Var % Mês Endolog] > 0, "#D64545", "#2E9E6B" )'),
     meas("Acumulado Ano Endolog", "VAR _d = MAX ( dDATAS[Data] ) RETURN CALCULATE ( [VALORREAL], REMOVEFILTERS ( dDATAS ), dDATAS[Ano] = YEAR ( _d ), dDATAS[Data] <= _d )", BRL),
     meas("Total Faturado", "[VALORREAL] + [valorreallog]", BRL),
-    meas("Total Faturado Moeda", "[tpmoeda] + [tpmoedalog]", BRL, DYN),
     meas("Peso Endolog %", "DIVIDE ( [VALORREAL], [Total Faturado] )", "0.0%"),
     meas("Período Selecionado", 'VAR _i = MIN ( dDATAS[Data] ) VAR _f = MAX ( dDATAS[Data] ) RETURN "Período: " & FORMAT ( _i, "mmm/yy" ) & " a " & FORMAT ( _f, "mmm/yy" )'),
     meas("Última Atualização", '"Atualizado em " & FORMAT ( MAX ( Atualizacao[Data] ), "dd/mm/yyyy hh:mm" )'),
@@ -53,7 +51,6 @@ cols_endolog = [col("FILIAL","string"), col("BU","string"), col("TIPO DE SERVIÇ
 mes_log = [
     meas("valorreallog", f"SUM ( '{L}'[Total] )", BRL),
     meas("ValorEmUSDlogmed", "SUMX ( VALUES ( dDATAS[Data] ), DIVIDE ( [valorreallog], CALCULATE ( MAX ( dDATAS[PTAX] ) ) ) )", USD),
-    meas("tpmoedalog", 'IF ( SELECTEDVALUE ( TipoMoeda[Moeda], "Real" ) = "Real", [valorreallog], [ValorEmUSDlogmed] )', BRL, DYN),
     meas("Qtde Serviços LOGMED", f"SUM ( '{L}'[Quantidade] )", "#,0"),
     meas("Preço Médio LOGMED", "DIVIDE ( [valorreallog], [Qtde Serviços LOGMED] )", BRL2),
     meas("Valor Mês Anterior LOGMED", "VAR _d = MAX ( dDATAS[Data] ) RETURN CALCULATE ( [valorreallog], REMOVEFILTERS ( dDATAS ), dDATAS[Data] = EDATE ( _d, -1 ) )", BRL),
@@ -71,11 +68,17 @@ tables = [
     {"name": L, "columns": cols_log, "measures": mes_log, "partitions": part(L, ns["M_LOGSERV"])},
     {"name": "dDATAS", "dataCategory": "Time", "columns": cols_d, "partitions": part("dDATAS", ns["M_DDATAS"])},
     {"name": "FILIAISENDOLOG", "columns": [col("FILIAL","string")], "partitions": part("FILIAISENDOLOG", ns["M_FILIAIS"])},
-    {"name": "TipoMoeda", "columns": [col("Moeda","string")], "partitions": part("TipoMoeda", ns["M_MOEDA"])},
+    {"name": "TipoMoeda",
+     "calculationGroup": {"precedence": 0, "calculationItems": [
+         {"name": "Real", "ordinal": 0, "expression": "SELECTEDMEASURE()", "formatStringDefinition": {"expression": "SELECTEDMEASUREFORMATSTRING()"}},
+         {"name": "Dolar", "ordinal": 1, "expression": ns["CG_DOLAR"].strip("\n").splitlines(),
+          "formatStringDefinition": {"expression": ns["CG_DOLAR_FMT"].strip("\n").splitlines()}}]},
+     "columns": [col("Moeda","string",sort="Ordinal") | {"sourceColumn": "Name"}, col("Ordinal","int64",hidden=True)],
+     "partitions": [{"name": "TipoMoeda", "mode": "import", "source": {"type": "calculationGroup"}}]},
     {"name": "Atualizacao", "isHidden": True, "columns": [col("Data","dateTime","General Date")], "partitions": part("Atualizacao", ns["M_ATU"])},
 ]
 for t in tables:
-    t["annotations"] = [{"name": "PBI_ResultType", "value": "Table"}]
+    if "calculationGroup" not in t: t["annotations"] = [{"name": "PBI_ResultType", "value": "Table"}]
 
 G = "Funções e consultas auxiliares"
 def expr(name, m, result="Table"):
@@ -97,7 +100,7 @@ for i, (ft, fc, tt, tc) in enumerate([(F,"DataRef","dDATAS","Data"), (L,"DataRef
 order = ["pTaxaDolarPadrao","PastaFaturas","fxLerAba","fxNumero","fxMes","fxDataReferencia","Cambio","FRETES","Serviços",F,
          "LOGMED_armazenagem","LOGMED_atendimento",L,"dDATAS","FILIAISENDOLOG","TipoMoeda","Atualizacao"]
 schema = {"name": "FaturasEndolog_Executivo", "compatibilityLevel": 1567,
-    "model": {"culture": "pt-BR", "defaultPowerBIDataSourceVersion": "powerBI_V3", "sourceQueryCulture": "pt-BR",
+    "model": {"culture": "pt-BR", "defaultPowerBIDataSourceVersion": "powerBI_V3", "sourceQueryCulture": "pt-BR", "discourageImplicitMeasures": True,
               "dataAccessOptions": {"legacyRedirects": True, "returnErrorValuesAsNull": True},
               "tables": tables, "relationships": rels, "expressions": expressions,
               "queryGroups": [{"folder": G}],

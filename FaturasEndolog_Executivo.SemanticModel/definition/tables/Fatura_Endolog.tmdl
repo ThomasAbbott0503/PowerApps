@@ -6,10 +6,6 @@ table Fatura_Endolog
 	measure VALORDOLAR = SUMX ( VALUES ( dDATAS[Data] ), DIVIDE ( [VALORREAL], CALCULATE ( MAX ( dDATAS[PTAX] ) ) ) )
 		formatString: "US$"\ #,0;-"US$"\ #,0;"US$"\ #,0
 
-	measure tpmoeda = IF ( SELECTEDVALUE ( TipoMoeda[Moeda], "Real" ) = "Real", [VALORREAL], [VALORDOLAR] )
-		formatString: "R$"\ #,0;-"R$"\ #,0;"R$"\ #,0
-		formatStringDefinition = IF ( SELECTEDVALUE ( TipoMoeda[Moeda], "Real" ) = "Real", """R$"" #,0", """US$"" #,0" )
-
 	measure 'Qtde Serviços Endolog' = SUM ( Fatura_Endolog[QTDE] )
 		formatString: #,0
 
@@ -29,10 +25,6 @@ table Fatura_Endolog
 
 	measure 'Total Faturado' = [VALORREAL] + [valorreallog]
 		formatString: "R$"\ #,0;-"R$"\ #,0;"R$"\ #,0
-
-	measure 'Total Faturado Moeda' = [tpmoeda] + [tpmoedalog]
-		formatString: "R$"\ #,0;-"R$"\ #,0;"R$"\ #,0
-		formatStringDefinition = IF ( SELECTEDVALUE ( TipoMoeda[Moeda], "Real" ) = "Real", """R$"" #,0", """US$"" #,0" )
 
 	measure 'Peso Endolog %' = DIVIDE ( [VALORREAL], [Total Faturado] )
 		formatString: 0.0%

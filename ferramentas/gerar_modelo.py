@@ -218,7 +218,6 @@ F = "Fatura_Endolog"; L = "'LOGMED-Serviços'"
 mes_endolog = (
     meas("VALORREAL", f"SUM ( {F}[COBRADO] )", BRL)
   + meas("VALORDOLAR", f"SUMX ( VALUES ( dDATAS[Data] ), DIVIDE ( [VALORREAL], CALCULATE ( MAX ( dDATAS[PTAX] ) ) ) )", USD)
-  + meas("tpmoeda", 'IF ( SELECTEDVALUE ( TipoMoeda[Moeda], "Real" ) = "Real", [VALORREAL], [VALORDOLAR] )', BRL, DYN)
   + meas("Qtde Serviços Endolog", f"SUM ( {F}[QTDE] )", "#,0")
   + meas("Preço Médio Endolog", "DIVIDE ( [VALORREAL], [Qtde Serviços Endolog] )", BRL2)
   + meas("Valor Mês Anterior Endolog", "VAR _d = MAX ( dDATAS[Data] ) RETURN CALCULATE ( [VALORREAL], REMOVEFILTERS ( dDATAS ), dDATAS[Data] = EDATE ( _d, -1 ) )", BRL)
@@ -226,7 +225,6 @@ mes_endolog = (
   + meas("Cor Var Endolog", 'IF ( [Var % Mês Endolog] > 0, "#D64545", "#2E9E6B" )')
   + meas("Acumulado Ano Endolog", "VAR _d = MAX ( dDATAS[Data] ) RETURN CALCULATE ( [VALORREAL], REMOVEFILTERS ( dDATAS ), dDATAS[Ano] = YEAR ( _d ), dDATAS[Data] <= _d )", BRL)
   + meas("Total Faturado", "[VALORREAL] + [valorreallog]", BRL)
-  + meas("Total Faturado Moeda", "[tpmoeda] + [tpmoedalog]", BRL, DYN)
   + meas("Peso Endolog %", "DIVIDE ( [VALORREAL], [Total Faturado] )", "0.0%")
   + meas("Período Selecionado", 'VAR _i = MIN ( dDATAS[Data] ) VAR _f = MAX ( dDATAS[Data] ) RETURN "Período: " & FORMAT ( _i, "mmm/yy" ) & " a " & FORMAT ( _f, "mmm/yy" )')
   + meas("Última Atualização", '"Atualizado em " & FORMAT ( MAX ( Atualizacao[Data] ), "dd/mm/yyyy hh:mm" )')
@@ -240,7 +238,6 @@ table("Fatura_Endolog", mes_endolog + cols_endolog + part("Fatura_Endolog", M_FA
 mes_log = (
     meas("valorreallog", f"SUM ( {L}[Total] )", BRL)
   + meas("ValorEmUSDlogmed", "SUMX ( VALUES ( dDATAS[Data] ), DIVIDE ( [valorreallog], CALCULATE ( MAX ( dDATAS[PTAX] ) ) ) )", USD)
-  + meas("tpmoedalog", 'IF ( SELECTEDVALUE ( TipoMoeda[Moeda], "Real" ) = "Real", [valorreallog], [ValorEmUSDlogmed] )', BRL, DYN)
   + meas("Qtde Serviços LOGMED", f"SUM ( {L}[Quantidade] )", "#,0")
   + meas("Preço Médio LOGMED", "DIVIDE ( [valorreallog], [Qtde Serviços LOGMED] )", BRL2)
   + meas("Valor Mês Anterior LOGMED", "VAR _d = MAX ( dDATAS[Data] ) RETURN CALCULATE ( [valorreallog], REMOVEFILTERS ( dDATAS ), dDATAS[Data] = EDATE ( _d, -1 ) )", BRL)
@@ -257,7 +254,35 @@ cols_d = (col("Data","dateTime","Short Date") + col("Ano","int64","0") + col("M�
   + col("Trimestre","string") + col("PTAX","double","0.0000"))
 table("dDATAS", "\tdataCategory: Time\n\n" + cols_d + part("dDATAS", M_DDATAS))
 table("FILIAISENDOLOG", col("FILIAL","string") + part("FILIAISENDOLOG", M_FILIAIS))
-table("TipoMoeda", col("Moeda","string") + part("TipoMoeda", M_MOEDA))
+CG_DOLAR = """
+VAR _taxaE = DIVIDE ( [VALORREAL], [VALORDOLAR] )
+VAR _taxaL = DIVIDE ( [valorreallog], [ValorEmUSDlogmed] )
+VAR _taxaT = DIVIDE ( [VALORREAL] + [valorreallog], [VALORDOLAR] + [ValorEmUSDlogmed] )
+RETURN
+    SWITCH (
+        TRUE (),
+        ISSELECTEDMEASURE ( [VALORREAL], [Valor Mês Anterior Endolog], [Acumulado Ano Endolog], [Preço Médio Endolog] ), DIVIDE ( SELECTEDMEASURE (), _taxaE ),
+        ISSELECTEDMEASURE ( [valorreallog], [Valor Mês Anterior LOGMED], [Acumulado Ano LOGMED], [Preço Médio LOGMED] ), DIVIDE ( SELECTEDMEASURE (), _taxaL ),
+        ISSELECTEDMEASURE ( [Total Faturado] ), DIVIDE ( SELECTEDMEASURE (), _taxaT ),
+        SELECTEDMEASURE ()
+    )
+"""
+CG_DOLAR_FMT = """
+SWITCH (
+    TRUE (),
+    ISSELECTEDMEASURE ( [Preço Médio Endolog], [Preço Médio LOGMED] ), \"\"\"US$\"\" #,0.00\",
+    ISSELECTEDMEASURE ( [VALORREAL], [valorreallog], [Valor Mês Anterior Endolog], [Valor Mês Anterior LOGMED], [Acumulado Ano Endolog], [Acumulado Ano LOGMED], [Total Faturado] ), \"\"\"US$\"\" #,0\",
+    SELECTEDMEASUREFORMATSTRING ()
+)
+"""
+tm = ("table TipoMoeda\n\n\tcalculationGroup\n\t\tprecedence: 0\n\n"
+      "\t\tcalculationItem Real = SELECTEDMEASURE()\n\t\t\tordinal: 0\n\t\t\tformatStringDefinition = SELECTEDMEASUREFORMATSTRING()\n\n"
+      "\t\tcalculationItem Dolar = ```\n" + ind(CG_DOLAR, 4) + "\n\t\t\t\t```\n\t\t\tordinal: 1\n"
+      "\t\t\tformatStringDefinition = ```\n" + ind(CG_DOLAR_FMT, 4) + "\n\t\t\t\t```\n\n"
+      "\tcolumn Moeda\n\t\tdataType: string\n\t\tsummarizeBy: none\n\t\tsourceColumn: Name\n\t\tsortByColumn: Ordinal\n\n"
+      "\tcolumn Ordinal\n\t\tdataType: int64\n\t\tisHidden\n\t\tsummarizeBy: none\n\t\tsourceColumn: Ordinal\n\n"
+      "\tpartition TipoMoeda = calculationGroup\n\t\tmode: import\n")
+w("tables/TipoMoeda.tmdl", tm)
 table("Atualizacao", col("Data","dateTime","General Date") + part("Atualizacao", M_ATU), hidden=True)
 
 # ----------------------------------------------------------------- expressions
@@ -287,7 +312,7 @@ tabs = ["Fatura_Endolog","LOGMED-Serviços","dDATAS","FILIAISENDOLOG","TipoMoeda
 order = ["pTaxaDolarPadrao","PastaFaturas","fxLerAba","fxNumero","fxMes","fxDataReferencia","Cambio","FRETES","Serviços","Fatura_Endolog",
          "LOGMED_armazenagem","LOGMED_atendimento","LOGMED-Serviços","dDATAS","FILIAISENDOLOG","TipoMoeda","Atualizacao"]
 mdl = ("model Model\n\tculture: pt-BR\n\tdefaultPowerBIDataSourceVersion: powerBI_V3\n\tsourceQueryCulture: pt-BR\n"
-       "\tdataAccessOptions\n\t\tlegacyRedirects\n\t\treturnErrorValuesAsNull\n\n"
+       "\tdiscourageImplicitMeasures\n\tdataAccessOptions\n\t\tlegacyRedirects\n\t\treturnErrorValuesAsNull\n\n"
        f"queryGroup '{G}'\n\n"
        f"annotation PBI_QueryOrder = {json.dumps(order, ensure_ascii=False)}\n\nannotation __PBI_TimeIntelligenceEnabled = 0\n\n"
        + "".join(f"ref table {('\'' + t + '\'') if '-' in t else t}\n" for t in tabs) + "")

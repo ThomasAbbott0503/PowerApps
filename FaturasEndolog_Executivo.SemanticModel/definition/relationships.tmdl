@@ -1,15 +1,15 @@
-relationship e68b2482-198e-4d59-8bc1-8e0d7d188c1f
+relationship 49de2030-a9c4-4b19-b08a-f522108683e3
 	fromColumn: Fatura_Endolog.DataRef
 	toColumn: dDATAS.Data
 
-relationship ca5e73ec-86e2-4d6c-958e-cdb0f415c23d
+relationship 6c4d2b1a-0e86-4091-8278-2dd0297a2a68
 	fromColumn: 'LOGMED-Serviços'.DataRef
 	toColumn: dDATAS.Data
 
-relationship e142f522-fea0-475c-b215-8383845d6521
+relationship f9c4fa6a-7dc0-45fb-9fa3-4bdde7cea7ad
 	fromColumn: Fatura_Endolog.FILIAL
 	toColumn: FILIAISENDOLOG.FILIAL
 
-relationship c9d97c79-4252-490d-8de1-24fa9def2f54
+relationship d256d9b3-97af-4d3f-8762-98fa1cb068cb
 	fromColumn: 'LOGMED-Serviços'.FILIAL
 	toColumn: FILIAISENDOLOG.FILIAL

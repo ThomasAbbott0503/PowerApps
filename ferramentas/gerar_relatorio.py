@@ -243,10 +243,10 @@ def pagina_fatura(s, titulo, T, medidas, campo_titulo, campo_tipo, campo_bu):
     fundo_pagina(s)
 
 pagina_fatura(S["Faturas ENDOLOG"], "Faturas Last Mile – ENDOLOG", "Fatura_Endolog",
-              dict(valor="tpmoeda", qtde="Qtde Serviços Endolog", preco="Preço Médio Endolog", var="Var % Mês Endolog", cor="Cor Var Endolog"),
+              dict(valor="VALORREAL", qtde="Qtde Serviços Endolog", preco="Preço Médio Endolog", var="Var % Mês Endolog", cor="Cor Var Endolog"),
               "TÍTULO", "TIPO DE SERVIÇO", "BU")
 pagina_fatura(S["Faturas LOGMED"], "Faturas Last Mile – LOGMED", "LOGMED-Serviços",
-              dict(valor="tpmoedalog", qtde="Qtde Serviços LOGMED", preco="Preço Médio LOGMED", var="Var % Mês LOGMED", cor="Cor Var LOGMED"),
+              dict(valor="valorreallog", qtde="Qtde Serviços LOGMED", preco="Preço Médio LOGMED", var="Var % Mês LOGMED", cor="Cor Var LOGMED"),
               "TÍTULO", "SERVIÇO", "BU")
 
 # ---------- Cost Drive ----------
@@ -268,17 +268,17 @@ for i, (v, titulo, campo, sel) in enumerate(lista):
     campos(v, {"Values": [campo]}); formatar(v); slicer_cfg(v, titulo, sel); mover(v, MG + i * (w + 8), HDR + 8, w, 52)
 m = clonar(moeda_modelo); campos(m, {"Values": [C("TipoMoeda", "Moeda")]}); formatar(m)
 slicer_cfg(m, "Moeda", ("TipoMoeda", "Moeda", "'Real'"), horizontal=True); mover(m, 1264 - 170, HDR + 8, 170, 52); vs.append(m)
-kpis = [("Total faturado", "Fatura_Endolog", "Total Faturado Moeda"), ("Peso Endolog no total", "Fatura_Endolog", "Peso Endolog %"),
+kpis = [("Total faturado", "Fatura_Endolog", "Total Faturado"), ("Peso Endolog no total", "Fatura_Endolog", "Peso Endolog %"),
         ("Acumulado no ano – Endolog", "Fatura_Endolog", "Acumulado Ano Endolog"), ("Acumulado no ano – LOGMED", "LOGMED-Serviços", "Acumulado Ano LOGMED")]
 for i, (nome, tab, med) in enumerate(kpis):
     v = clonar(pegar(MODELO["visualContainers"], "card", lambda cp: not any("Cabeçalho Info" in x for x in cp))); vs.append(v)
     campos(v, {"Values": [M(tab, med)]}); formatar(v, nome); mover(v, MG + i * (KW + 12), 124, KW, 84)
 piv_e = pegar(vs, "pivotTable", lambda cp: any("Fatura_Endolog" in x for x in cp))
 piv_l = pegar(vs, "pivotTable", lambda cp: any("LOGMED" in x for x in cp))
-campos(piv_e, {"Rows": [C("Fatura_Endolog", "TIPO DE SERVIÇO")], "Columns": [C("dDATAS", "MêsAno")], "Values": [M("Fatura_Endolog", "tpmoeda")]},
-       nomes={"Fatura_Endolog.TIPO DE SERVIÇO": "Tipo de serviço", "Fatura_Endolog.tpmoeda": "Valor"})
-campos(piv_l, {"Rows": [C("LOGMED-Serviços", "SERVIÇO")], "Columns": [C("dDATAS", "MêsAno")], "Values": [M("LOGMED-Serviços", "tpmoedalog")]},
-       nomes={"LOGMED-Serviços.SERVIÇO": "Serviço", "LOGMED-Serviços.tpmoedalog": "Valor"})
+campos(piv_e, {"Rows": [C("Fatura_Endolog", "TIPO DE SERVIÇO")], "Columns": [C("dDATAS", "MêsAno")], "Values": [M("Fatura_Endolog", "VALORREAL")]},
+       nomes={"Fatura_Endolog.TIPO DE SERVIÇO": "Tipo de serviço", "Fatura_Endolog.VALORREAL": "Valor"})
+campos(piv_l, {"Rows": [C("LOGMED-Serviços", "SERVIÇO")], "Columns": [C("dDATAS", "MêsAno")], "Values": [M("LOGMED-Serviços", "valorreallog")]},
+       nomes={"LOGMED-Serviços.SERVIÇO": "Serviço", "LOGMED-Serviços.valorreallog": "Valor"})
 formatar(piv_e, "ENDOLOG – valor por tipo de serviço e mês"); mover(piv_e, MG, 220, 618, 290)
 formatar(piv_l, "LOGMED – valor por tipo de serviço e mês"); mover(piv_l, 646, 220, 618, 290)
 for v in list(vs):
@@ -286,8 +286,8 @@ for v in list(vs):
         txt = json.loads(v["config"])["singleVisual"]["objects"]["general"][0]["properties"]["paragraphs"][0]["textRuns"][0]["value"]
         if txt in ("ENDOLOG", "LOGMED"): vs.remove(v)
 tot = clonar(pegar(MODELO["visualContainers"], "lineChart")); vs.append(tot)
-campos(tot, {"Category": [C("dDATAS", "MêsAno")], "Y": [M("Fatura_Endolog", "tpmoeda"), M("LOGMED-Serviços", "tpmoedalog")]},
-       nomes={"Fatura_Endolog.tpmoeda": "Endolog", "LOGMED-Serviços.tpmoedalog": "LOGMED"})
+campos(tot, {"Category": [C("dDATAS", "MêsAno")], "Y": [M("Fatura_Endolog", "VALORREAL"), M("LOGMED-Serviços", "valorreallog")]},
+       nomes={"Fatura_Endolog.VALORREAL": "Endolog", "LOGMED-Serviços.valorreallog": "LOGMED"})
 formatar(tot, "Total faturado por mês – Endolog e LOGMED", rotulos=False); mover(tot, MG, 522, 1248, 186)
 c = json.loads(tot["config"]); c["singleVisual"]["objects"]["legend"] = [{"properties": {"show": lit("true"), "position": lit("'Top'")}}]
 tot["config"] = json.dumps(c, ensure_ascii=False)
