@@ -119,12 +119,14 @@ with zipfile.ZipFile(OUT, "w", zipfile.ZIP_DEFLATED) as o:
     o.writestr("[Content_Types].xml", ct.encode("utf-8"))
     o.writestr("Version", z.read("Version"))
     o.writestr("DataModelSchema", u16(schema))
-    o.writestr("DiagramLayout", u16({"version": "1.1.0", "diagrams": []}))
+    o.writestr("DiagramLayout", u16({"version": "1.1.0", "diagrams": [{"ordinal": 0, "scrollPosition": {"x": 0, "y": 0}, "nodes": [],
+        "name": "Todas as tabelas", "zoomValue": 100, "pinKeyFieldsToTop": False, "showExtraHeaderInfo": False,
+        "hideKeyFieldsWhenCollapsed": False, "tablesLocked": False}], "selectedDiagram": "Todas as tabelas", "defaultDiagram": "Todas as tabelas"}))
     o.writestr("Report/Layout", u16(L_json))
     o.writestr("Settings", z.read("Settings"))
     o.writestr("Metadata", z.read("Metadata"))
     for it in z.infolist():
-        if it.filename.startswith("Report/StaticResources/RegisteredResources/Png"):
-            o.writestr(it.filename, z.read(it.filename))
+        if it.filename.startswith("Report/StaticResources/RegisteredResources/Png") or it.filename.startswith("Report/StaticResources/SharedResources/"):
+            o.writestr(it.filename, z.read(it.filename))   # logo + tema-base do Desktop (CY24SU08), referenciados no Layout
     o.write(THEME, "Report/StaticResources/RegisteredResources/AbbottExecutivo.json")
 print("pbit ok", OUT)

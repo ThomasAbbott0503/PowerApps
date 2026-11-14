@@ -308,8 +308,10 @@ os.makedirs(os.path.join(OUT, "StaticResources", "RegisteredResources"), exist_o
 with open(os.path.join(OUT, "report.json"), "w", encoding="utf-8") as f:
     json.dump(L, f, ensure_ascii=False)
 for it in z.infolist():
-    if it.filename.startswith("Report/StaticResources/RegisteredResources/Png"):
-        open(os.path.join(OUT, "StaticResources", "RegisteredResources", os.path.basename(it.filename)), "wb").write(z.read(it.filename))
+    if it.filename.startswith("Report/StaticResources/") and not it.filename.endswith("Sunflower_Twilight4218505826991814.json"):
+        dest = os.path.join(OUT, it.filename[len("Report/"):])
+        os.makedirs(os.path.dirname(dest), exist_ok=True)
+        open(dest, "wb").write(z.read(it.filename))
 shutil.copy(THEME, os.path.join(OUT, "StaticResources", "RegisteredResources", THEME_NAME))
 with open(os.path.join(OUT, "definition.pbir"), "w") as f:
     json.dump({"version": "1.0", "datasetReference": {"byPath": {"path": "../FaturasEndolog_Executivo.SemanticModel"}}}, f, indent=2)
