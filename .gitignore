@@ -1,0 +1,9 @@
+# Dados nunca sobem para o GitHub
+*.pbix
+*.xlsx
+*.xlsm
+*.xls
+*.csv
+# Cache do Power BI Desktop
+*.abf
+.pbi/

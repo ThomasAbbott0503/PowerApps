@@ -3,7 +3,6 @@ import os, sys, json, uuid
 OUT = sys.argv[1]
 D = os.path.join(OUT, "definition")
 os.makedirs(os.path.join(D, "tables"), exist_ok=True)
-os.makedirs(os.path.join(D, "cultures"), exist_ok=True)
 
 SITE = "https://abbott.sharepoint.com/sites/BR-MD-SUPPLYCHAINFAT/"
 BRL = '"R$"\\ #,0;-"R$"\\ #,0;"R$"\\ #,0'
@@ -45,9 +44,14 @@ let
         else if Value.Is(v, type number) then v
         else
             let
-                t = Text.Trim(Text.Replace(Text.Replace(Text.From(v), "R$", ""), " ", "")),
-                pct = Text.EndsWith(t, "%"),
-                n = try Number.FromText(Text.Replace(Text.Replace(Text.TrimEnd(t, "%"), ".", ""), ",", ".")) otherwise null
+                t0 = Text.Trim(Text.Replace(Text.Replace(Text.Replace(Text.From(v), "R$", ""), "US$", ""), " ", "")),
+                pct = Text.EndsWith(t0, "%"),
+                t = Text.TrimEnd(t0, "%"),
+                // "1.234,56" -> 1234.56 | "999.99" (um ponto, 2 casas) -> 999.99 | "1.234" -> 1234
+                limpo = if Text.Contains(t, ",") then Text.Replace(Text.Replace(t, ".", ""), ",", ".")
+                        else if Text.Contains(t, ".") and List.Count(Text.Split(t, ".")) = 2 and Text.Length(Text.AfterDelimiter(t, ".")) = 2 then t
+                        else Text.Replace(t, ".", ""),
+                n = if limpo = "" or limpo = "-" then null else try Number.FromText(limpo, "en-US") otherwise null
             in
                 if n = null then null else if pct then n / 100 else n
 in
@@ -218,7 +222,7 @@ mes_endolog = (
   + meas("Qtde Serviços Endolog", f"SUM ( {F}[QTDE] )", "#,0")
   + meas("Preço Médio Endolog", "DIVIDE ( [VALORREAL], [Qtde Serviços Endolog] )", BRL2)
   + meas("Valor Mês Anterior Endolog", "VAR _d = MAX ( dDATAS[Data] ) RETURN CALCULATE ( [VALORREAL], REMOVEFILTERS ( dDATAS ), dDATAS[Data] = EDATE ( _d, -1 ) )", BRL)
-  + meas("Var % Mês Endolog", "VAR _a = [Valor Mês Anterior Endolog] RETURN IF ( NOT ISBLANK ( _a ), DIVIDE ( [VALORREAL] - _a, _a ) )", "+0.0%;-0.0%;0.0%")
+  + meas("Var % Mês Endolog", "VAR _a = [Valor Mês Anterior Endolog] RETURN IF ( NOT ISBLANK ( _a ), DIVIDE ( [VALORREAL] - _a, _a ) )", "▲ 0.0%;▼ 0.0%;0.0%")
   + meas("Cor Var Endolog", 'IF ( [Var % Mês Endolog] > 0, "#D64545", "#2E9E6B" )')
   + meas("Acumulado Ano Endolog", "VAR _d = MAX ( dDATAS[Data] ) RETURN CALCULATE ( [VALORREAL], REMOVEFILTERS ( dDATAS ), dDATAS[Ano] = YEAR ( _d ), dDATAS[Data] <= _d )", BRL)
   + meas("Total Faturado", "[VALORREAL] + [valorreallog]", BRL)
@@ -240,7 +244,7 @@ mes_log = (
   + meas("Qtde Serviços LOGMED", f"SUM ( {L}[Quantidade] )", "#,0")
   + meas("Preço Médio LOGMED", "DIVIDE ( [valorreallog], [Qtde Serviços LOGMED] )", BRL2)
   + meas("Valor Mês Anterior LOGMED", "VAR _d = MAX ( dDATAS[Data] ) RETURN CALCULATE ( [valorreallog], REMOVEFILTERS ( dDATAS ), dDATAS[Data] = EDATE ( _d, -1 ) )", BRL)
-  + meas("Var % Mês LOGMED", "VAR _a = [Valor Mês Anterior LOGMED] RETURN IF ( NOT ISBLANK ( _a ), DIVIDE ( [valorreallog] - _a, _a ) )", "+0.0%;-0.0%;0.0%")
+  + meas("Var % Mês LOGMED", "VAR _a = [Valor Mês Anterior LOGMED] RETURN IF ( NOT ISBLANK ( _a ), DIVIDE ( [valorreallog] - _a, _a ) )", "▲ 0.0%;▼ 0.0%;0.0%")
   + meas("Cor Var LOGMED", 'IF ( [Var % Mês LOGMED] > 0, "#D64545", "#2E9E6B" )')
   + meas("Acumulado Ano LOGMED", "VAR _d = MAX ( dDATAS[Data] ) RETURN CALCULATE ( [valorreallog], REMOVEFILTERS ( dDATAS ), dDATAS[Ano] = YEAR ( _d ), dDATAS[Data] <= _d )", BRL)
 )
@@ -278,7 +282,6 @@ for i,(a,b) in enumerate([("Fatura_Endolog.DataRef","dDATAS.Data"),("'LOGMED-Ser
     R += f"relationship {uuid.uuid4()}\n\tfromColumn: {a}\n\ttoColumn: {b}\n\n"
 w("relationships.tmdl", R)
 
-w("cultures/pt-BR.tmdl", 'cultureInfo pt-BR\n\n\tlinguisticMetadata =\n\t\t\t{"Version":"1.0.0","Language":"pt-BR"}\n\t\tcontentType: json\n')
 w("database.tmdl", "database\n\tcompatibilityLevel: 1567\n")
 tabs = ["Fatura_Endolog","LOGMED-Serviços","dDATAS","FILIAISENDOLOG","TipoMoeda","Atualizacao"]
 order = ["pTaxaDolarPadrao","PastaFaturas","fxLerAba","fxNumero","fxMes","fxDataReferencia","Cambio","FRETES","Serviços","Fatura_Endolog",
@@ -287,7 +290,7 @@ mdl = ("model Model\n\tculture: pt-BR\n\tdefaultPowerBIDataSourceVersion: powerB
        "\tdataAccessOptions\n\t\tlegacyRedirects\n\t\treturnErrorValuesAsNull\n\n"
        f"queryGroup '{G}'\n\n"
        f"annotation PBI_QueryOrder = {json.dumps(order, ensure_ascii=False)}\n\nannotation __PBI_TimeIntelligenceEnabled = 0\n\n"
-       + "".join(f"ref table {('\'' + t + '\'') if '-' in t else t}\n" for t in tabs) + "\nref cultureInfo pt-BR\n")
+       + "".join(f"ref table {('\'' + t + '\'') if '-' in t else t}\n" for t in tabs) + "")
 w("model.tmdl", mdl)
 
 with open(os.path.join(OUT, "definition.pbism"), "w") as f:

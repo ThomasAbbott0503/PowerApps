@@ -18,5 +18,3 @@ ref table dDATAS
 ref table FILIAISENDOLOG
 ref table TipoMoeda
 ref table Atualizacao
-
-ref cultureInfo pt-BR

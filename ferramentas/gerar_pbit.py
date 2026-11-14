@@ -39,7 +39,6 @@ mes_endolog = [
     meas("Valor Mês Anterior Endolog", "VAR _d = MAX ( dDATAS[Data] ) RETURN CALCULATE ( [VALORREAL], REMOVEFILTERS ( dDATAS ), dDATAS[Data] = EDATE ( _d, -1 ) )", BRL),
     meas("Var % Mês Endolog", "VAR _a = [Valor Mês Anterior Endolog] RETURN IF ( NOT ISBLANK ( _a ), DIVIDE ( [VALORREAL] - _a, _a ) )", VAR_FMT),
     meas("Cor Var Endolog", 'IF ( [Var % Mês Endolog] > 0, "#D64545", "#2E9E6B" )'),
-    meas("Rótulo Var Endolog", 'VAR _d = MAX ( dDATAS[Data] ) RETURN FORMAT ( _d, "mmm/yy" ) & " vs " & FORMAT ( EDATE ( _d, -1 ), "mmm/yy" )'),
     meas("Acumulado Ano Endolog", "VAR _d = MAX ( dDATAS[Data] ) RETURN CALCULATE ( [VALORREAL], REMOVEFILTERS ( dDATAS ), dDATAS[Ano] = YEAR ( _d ), dDATAS[Data] <= _d )", BRL),
     meas("Total Faturado", "[VALORREAL] + [valorreallog]", BRL),
     meas("Total Faturado Moeda", "[tpmoeda] + [tpmoedalog]", BRL, DYN),
@@ -102,25 +101,10 @@ schema = {"name": "FaturasEndolog_Executivo", "compatibilityLevel": 1567,
               "dataAccessOptions": {"legacyRedirects": True, "returnErrorValuesAsNull": True},
               "tables": tables, "relationships": rels, "expressions": expressions,
               "queryGroups": [{"folder": G}],
-              "cultures": [{"name": "pt-BR", "linguisticMetadata": {"content": {"Version": "1.0.0", "Language": "pt-BR"}, "contentType": "json"}}],
               "annotations": [{"name": "PBI_QueryOrder", "value": json.dumps(order, ensure_ascii=False)},
                               {"name": "__PBI_TimeIntelligenceEnabled", "value": "0"}]}}
 
-# ---------- layout: cor condicional nos cartões de variação ----------
 L_json = json.load(open(REPORT_JSON, encoding="utf-8"))
-def lit(v): return {"expr": {"Literal": {"Value": v}}}
-for s in L_json["sections"]:
-    for v in s["visualContainers"]:
-        c = json.loads(v["config"]); sv = c["singleVisual"]
-        names = [x["Name"] for x in sv.get("prototypeQuery", {}).get("Select", [])]
-        if sv.get("visualType") == "card" and any("Var % Mês" in n for n in names):
-            tab = "Fatura_Endolog" if "Endolog" in names[0] else "LOGMED-Serviços"
-            medida = "Cor Var Endolog" if "Endolog" in names[0] else "Cor Var LOGMED"
-            sv["objects"]["labels"] = [{"properties": {"fontSize": lit("26D"),
-                "color": {"solid": {"color": {"expr": {"Measure": {"Expression": {"SourceRef": {"Entity": tab}}, "Property": medida}}}}}}}]
-            v["config"] = json.dumps(c, ensure_ascii=False)
-
-json.dump(L_json, open(REPORT_JSON, "w", encoding="utf-8"), ensure_ascii=False)
 
 # ---------- grava o .pbit ----------
 z = zipfile.ZipFile(SRC)

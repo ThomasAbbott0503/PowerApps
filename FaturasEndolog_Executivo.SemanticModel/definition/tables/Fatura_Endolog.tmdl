@@ -20,7 +20,7 @@ table Fatura_Endolog
 		formatString: "R$"\ #,0;-"R$"\ #,0;"R$"\ #,0
 
 	measure 'Var % Mês Endolog' = VAR _a = [Valor Mês Anterior Endolog] RETURN IF ( NOT ISBLANK ( _a ), DIVIDE ( [VALORREAL] - _a, _a ) )
-		formatString: +0.0%;-0.0%;0.0%
+		formatString: ▲ 0.0%;▼ 0.0%;0.0%
 
 	measure 'Cor Var Endolog' = IF ( [Var % Mês Endolog] > 0, "#D64545", "#2E9E6B" )
 

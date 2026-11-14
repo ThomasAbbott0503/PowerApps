@@ -32,9 +32,14 @@ expression fxNumero =
 		        else if Value.Is(v, type number) then v
 		        else
 		            let
-		                t = Text.Trim(Text.Replace(Text.Replace(Text.From(v), "R$", ""), " ", "")),
-		                pct = Text.EndsWith(t, "%"),
-		                n = try Number.FromText(Text.Replace(Text.Replace(Text.TrimEnd(t, "%"), ".", ""), ",", ".")) otherwise null
+		                t0 = Text.Trim(Text.Replace(Text.Replace(Text.Replace(Text.From(v), "R$", ""), "US$", ""), " ", "")),
+		                pct = Text.EndsWith(t0, "%"),
+		                t = Text.TrimEnd(t0, "%"),
+		                // "1.234,56" -> 1234.56 | "999.99" (um ponto, 2 casas) -> 999.99 | "1.234" -> 1234
+		                limpo = if Text.Contains(t, ",") then Text.Replace(Text.Replace(t, ".", ""), ",", ".")
+		                        else if Text.Contains(t, ".") and List.Count(Text.Split(t, ".")) = 2 and Text.Length(Text.AfterDelimiter(t, ".")) = 2 then t
+		                        else Text.Replace(t, ".", ""),
+		                n = if limpo = "" or limpo = "-" then null else try Number.FromText(limpo, "en-US") otherwise null
 		            in
 		                if n = null then null else if pct then n / 100 else n
 		in

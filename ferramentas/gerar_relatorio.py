@@ -30,7 +30,7 @@ def C(tab, prop):   # coluna
 def M(tab, prop):   # medida
     return {"Measure": {"Expression": {"SourceRef": {"Source": ALIAS[tab]}}, "Property": prop}, "Name": f"{tab}.{prop}", "NativeReferenceName": prop}, tab
 
-def campos(v, roles, order_desc=None):
+def campos(v, roles, order_desc=None, extras=(), nomes=None):
     """roles: {"Category":[(sel,tab)], "Y":[...], ...}. Reescreve a consulta do visual."""
     c = json.loads(v["config"]); sv = c["singleVisual"]
     tabs, sel, proj = [], [], {}
@@ -42,12 +42,16 @@ def campos(v, roles, order_desc=None):
             p = {"queryRef": s["Name"]}
             if role in ("Category", "Rows", "Columns") and i == 0: p["active"] = True
             proj[role].append(p)
+    for s_, tab in extras:
+        if tab not in tabs: tabs.append(tab)
+        sel.append(s_)
     q = {"Version": 2, "From": [{"Name": ALIAS[t], "Entity": t, "Type": 0} for t in tabs], "Select": sel}
     if order_desc:
         q["OrderBy"] = [{"Direction": 2, "Expression": {k: v2 for k, v2 in order_desc.items() if k != "Name" and k != "NativeReferenceName"}}]
     sv["prototypeQuery"] = q
     sv["projections"] = proj
     for k in ("columnProperties", "hasDefaultSort"): sv.pop(k, None)
+    if nomes: sv["columnProperties"] = {k: {"displayName": n} for k, n in nomes.items()}
     for k in ("query", "dataTransforms"): v.pop(k, None)
     v["filters"] = "[]"
     c["singleVisual"] = sv
@@ -118,7 +122,7 @@ def tipo(v):
 
 def slicer_cfg(v, titulo, selecao=None, horizontal=False):
     c = json.loads(v["config"]); sv = c["singleVisual"]; ob = sv.setdefault("objects", {})
-    ob["header"] = [{"properties": {"show": lit("true"), "text": lit(f"'{titulo}'"), "fontSize": lit("10D")}}]
+    ob["header"] = [{"properties": {"show": lit("true"), "text": lit(f"'{titulo}'"), "textSize": lit("10D")}}]
     ob["data"] = [{"properties": {"mode": lit("'Basic'" if horizontal else "'Dropdown'")}}]
     ob["general"] = [{"properties": ({"orientation": lit("2D")} if horizontal else {})}]
     if selecao:
@@ -208,7 +212,14 @@ def pagina_fatura(s, titulo, T, medidas, campo_titulo, campo_tipo, campo_bu):
     nomes = [("Valor cobrado", medidas["valor"]), ("Qtde de serviços", medidas["qtde"]),
              ("Preço médio por serviço", medidas["preco"]), ("Variação vs mês anterior", medidas["var"])]
     for i, (v, (nome, med)) in enumerate(zip(cards, nomes)):
-        campos(v, {"Values": [M(T, med)]}); formatar(v, nome); mover(v, MG + i * (KW + 12), 124, KW, 84)
+        if i == 3:
+            campos(v, {"Values": [M(T, med)]}, extras=[M(T, medidas["cor"])]); formatar(v, nome)
+            c = json.loads(v["config"]); c["singleVisual"]["objects"]["labels"] = [{"properties": {"fontSize": lit("26D"),
+                "color": {"solid": {"color": {"expr": {"Measure": {"Expression": {"SourceRef": {"Entity": T}}, "Property": medidas["cor"]}}}}}}}]
+            v["config"] = json.dumps(c, ensure_ascii=False)
+        else:
+            campos(v, {"Values": [M(T, med)]}); formatar(v, nome)
+        mover(v, MG + i * (KW + 12), 124, KW, 84)
     y2, y3, y4 = 220, 422, 604
     ln = pegar(vs, "lineChart"); campos(ln, {"Category": [C("dDATAS", "MêsAno")], "Y": [M(T, medidas["valor"])]})
     formatar(ln, "Evolução mensal do valor cobrado"); mover(ln, MG, y2, 760, 190)
@@ -225,15 +236,17 @@ def pagina_fatura(s, titulo, T, medidas, campo_titulo, campo_tipo, campo_bu):
     formatar(cb, "Valor por filial (last mile)"); mover(cb, 840, y3, 424, 170)
     tb = pegar(vs, "tableEx")
     campos(tb, {"Values": [C(T, "FILIAL"), C(T, campo_bu), C(T, campo_tipo), C(T, campo_titulo), C("dDATAS", "MêsAno"),
-                           M(T, medidas["qtde"]), M(T, medidas["preco"]), M(T, medidas["valor"])]})
+                           M(T, medidas["qtde"]), M(T, medidas["preco"]), M(T, medidas["valor"])]},
+           nomes={f"{T}.FILIAL": "Filial", f"{T}.{campo_bu}": "BU", f"{T}.{campo_tipo}": "Tipo de serviço", f"{T}.{campo_titulo}": "Título",
+                  "dDATAS.MêsAno": "Mês", f"{T}.{medidas['qtde']}": "Qtde", f"{T}.{medidas['preco']}": "Preço médio", f"{T}.{medidas['valor']}": "Cobrado"})
     formatar(tb, "Detalhe das faturas"); mover(tb, MG, y4, 1248, 104)
     fundo_pagina(s)
 
 pagina_fatura(S["Faturas ENDOLOG"], "Faturas Last Mile – ENDOLOG", "Fatura_Endolog",
-              dict(valor="tpmoeda", qtde="Qtde Serviços Endolog", preco="Preço Médio Endolog", var="Var % Mês Endolog"),
+              dict(valor="tpmoeda", qtde="Qtde Serviços Endolog", preco="Preço Médio Endolog", var="Var % Mês Endolog", cor="Cor Var Endolog"),
               "TÍTULO", "TIPO DE SERVIÇO", "BU")
 pagina_fatura(S["Faturas LOGMED"], "Faturas Last Mile – LOGMED", "LOGMED-Serviços",
-              dict(valor="tpmoedalog", qtde="Qtde Serviços LOGMED", preco="Preço Médio LOGMED", var="Var % Mês LOGMED"),
+              dict(valor="tpmoedalog", qtde="Qtde Serviços LOGMED", preco="Preço Médio LOGMED", var="Var % Mês LOGMED", cor="Cor Var LOGMED"),
               "TÍTULO", "SERVIÇO", "BU")
 
 # ---------- Cost Drive ----------
@@ -262,8 +275,10 @@ for i, (nome, tab, med) in enumerate(kpis):
     campos(v, {"Values": [M(tab, med)]}); formatar(v, nome); mover(v, MG + i * (KW + 12), 124, KW, 84)
 piv_e = pegar(vs, "pivotTable", lambda cp: any("Fatura_Endolog" in x for x in cp))
 piv_l = pegar(vs, "pivotTable", lambda cp: any("LOGMED" in x for x in cp))
-campos(piv_e, {"Rows": [C("Fatura_Endolog", "TIPO DE SERVIÇO")], "Columns": [C("dDATAS", "MêsAno")], "Values": [M("Fatura_Endolog", "tpmoeda")]})
-campos(piv_l, {"Rows": [C("LOGMED-Serviços", "SERVIÇO")], "Columns": [C("dDATAS", "MêsAno")], "Values": [M("LOGMED-Serviços", "tpmoedalog")]})
+campos(piv_e, {"Rows": [C("Fatura_Endolog", "TIPO DE SERVIÇO")], "Columns": [C("dDATAS", "MêsAno")], "Values": [M("Fatura_Endolog", "tpmoeda")]},
+       nomes={"Fatura_Endolog.TIPO DE SERVIÇO": "Tipo de serviço", "Fatura_Endolog.tpmoeda": "Valor"})
+campos(piv_l, {"Rows": [C("LOGMED-Serviços", "SERVIÇO")], "Columns": [C("dDATAS", "MêsAno")], "Values": [M("LOGMED-Serviços", "tpmoedalog")]},
+       nomes={"LOGMED-Serviços.SERVIÇO": "Serviço", "LOGMED-Serviços.tpmoedalog": "Valor"})
 formatar(piv_e, "ENDOLOG – valor por tipo de serviço e mês"); mover(piv_e, MG, 220, 618, 290)
 formatar(piv_l, "LOGMED – valor por tipo de serviço e mês"); mover(piv_l, 646, 220, 618, 290)
 for v in list(vs):
@@ -271,7 +286,8 @@ for v in list(vs):
         txt = json.loads(v["config"])["singleVisual"]["objects"]["general"][0]["properties"]["paragraphs"][0]["textRuns"][0]["value"]
         if txt in ("ENDOLOG", "LOGMED"): vs.remove(v)
 tot = clonar(pegar(MODELO["visualContainers"], "lineChart")); vs.append(tot)
-campos(tot, {"Category": [C("dDATAS", "MêsAno")], "Y": [M("Fatura_Endolog", "tpmoeda"), M("LOGMED-Serviços", "tpmoedalog")]})
+campos(tot, {"Category": [C("dDATAS", "MêsAno")], "Y": [M("Fatura_Endolog", "tpmoeda"), M("LOGMED-Serviços", "tpmoedalog")]},
+       nomes={"Fatura_Endolog.tpmoeda": "Endolog", "LOGMED-Serviços.tpmoedalog": "LOGMED"})
 formatar(tot, "Total faturado por mês – Endolog e LOGMED", rotulos=False); mover(tot, MG, 522, 1248, 186)
 c = json.loads(tot["config"]); c["singleVisual"]["objects"]["legend"] = [{"properties": {"show": lit("true"), "position": lit("'Top'")}}]
 tot["config"] = json.dumps(c, ensure_ascii=False)
