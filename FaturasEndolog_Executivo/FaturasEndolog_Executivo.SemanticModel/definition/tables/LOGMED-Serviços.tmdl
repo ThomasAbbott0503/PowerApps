@@ -1,0 +1,93 @@
+table 'LOGMED-Serviços'
+
+	measure valorreallog = SUM ( 'LOGMED-Serviços'[Total] )
+		formatString: "R$"\ #,0;-"R$"\ #,0;"R$"\ #,0
+
+	measure ValorEmUSDlogmed = SUMX ( VALUES ( dDATAS[Data] ), DIVIDE ( [valorreallog], CALCULATE ( MAX ( dDATAS[PTAX] ) ) ) )
+		formatString: "US$"\ #,0;-"US$"\ #,0;"US$"\ #,0
+
+	measure tpmoedalog = IF ( SELECTEDVALUE ( TipoMoeda[Moeda], "Real" ) = "Real", [valorreallog], [ValorEmUSDlogmed] )
+		formatString: "R$"\ #,0;-"R$"\ #,0;"R$"\ #,0
+		formatStringDefinition = IF ( SELECTEDVALUE ( TipoMoeda[Moeda], "Real" ) = "Real", """R$"" #,0", """US$"" #,0" )
+
+	measure 'Qtde Serviços LOGMED' = SUM ( 'LOGMED-Serviços'[Quantidade] )
+		formatString: #,0
+
+	measure 'Preço Médio LOGMED' = DIVIDE ( [valorreallog], [Qtde Serviços LOGMED] )
+		formatString: "R$"\ #,0.00;-"R$"\ #,0.00;"R$"\ #,0.00
+
+	measure 'Valor Mês Anterior LOGMED' = VAR _d = MAX ( dDATAS[Data] ) RETURN CALCULATE ( [valorreallog], REMOVEFILTERS ( dDATAS ), dDATAS[Data] = EDATE ( _d, -1 ) )
+		formatString: "R$"\ #,0;-"R$"\ #,0;"R$"\ #,0
+
+	measure 'Var % Mês LOGMED' = VAR _a = [Valor Mês Anterior LOGMED] RETURN IF ( NOT ISBLANK ( _a ), DIVIDE ( [valorreallog] - _a, _a ) )
+		formatString: +0.0%;-0.0%;0.0%
+
+	measure 'Acumulado Ano LOGMED' = VAR _d = MAX ( dDATAS[Data] ) RETURN CALCULATE ( [valorreallog], REMOVEFILTERS ( dDATAS ), dDATAS[Ano] = YEAR ( _d ), dDATAS[Data] <= _d )
+		formatString: "R$"\ #,0;-"R$"\ #,0;"R$"\ #,0
+
+	column SERVIÇO
+		dataType: string
+		summarizeBy: none
+		sourceColumn: SERVIÇO
+
+	column Quantidade
+		dataType: double
+		formatString: #,0.##
+		summarizeBy: none
+		sourceColumn: Quantidade
+
+	column Valor
+		dataType: decimal
+		formatString: "R$"\ #,0.00;-"R$"\ #,0.00;"R$"\ #,0.00
+		summarizeBy: none
+		sourceColumn: Valor
+
+	column Total
+		dataType: decimal
+		formatString: "R$"\ #,0;-"R$"\ #,0;"R$"\ #,0
+		summarizeBy: none
+		sourceColumn: Total
+
+	column MÊS
+		dataType: string
+		summarizeBy: none
+		sourceColumn: MÊS
+
+	column FILIAL
+		dataType: string
+		summarizeBy: none
+		sourceColumn: FILIAL
+
+	column BU
+		dataType: string
+		summarizeBy: none
+		sourceColumn: BU
+
+	column TÍTULO
+		dataType: string
+		summarizeBy: none
+		sourceColumn: TÍTULO
+
+	column ANO
+		dataType: string
+		summarizeBy: none
+		sourceColumn: ANO
+
+	column DataRef
+		dataType: dateTime
+		formatString: Short Date
+		summarizeBy: none
+		sourceColumn: DataRef
+
+	partition 'LOGMED-Serviços' = m
+		mode: import
+		source =
+				let
+				    Fonte = Table.Combine({LOGMED_armazenagem, LOGMED_atendimento}),
+				    ComData = fxDataReferencia(Fonte, "MÊS", "ANO"),
+				    Limpo = Table.TransformColumns(ComData, {{"FILIAL", each Text.Upper(Text.Trim(Text.From(_))), type text}}),
+				    SemNulos = Table.ReplaceValue(Limpo, null, 0, Replacer.ReplaceValue, {"Quantidade", "Total"})
+				in
+				    SemNulos
+
+	annotation PBI_ResultType = Table

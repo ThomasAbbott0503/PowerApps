@@ -1,0 +1,336 @@
+{
+  "name": "Abbott Executivo",
+  "dataColors": [
+    "#000075",
+    "#009CDE",
+    "#7FCDEE",
+    "#5E6A71",
+    "#00A3AD",
+    "#B4C3CC",
+    "#F2A900",
+    "#3A3AA8"
+  ],
+  "foreground": "#1B2A3A",
+  "foregroundNeutralSecondary": "#5E6A71",
+  "foregroundNeutralTertiary": "#8A949B",
+  "background": "#FFFFFF",
+  "backgroundLight": "#F4F7F9",
+  "backgroundNeutral": "#E3E9ED",
+  "tableAccent": "#000075",
+  "good": "#2E9E6B",
+  "neutral": "#F2A900",
+  "bad": "#D64545",
+  "maximum": "#000075",
+  "center": "#009CDE",
+  "minimum": "#E3F4FB",
+  "hyperlink": "#009CDE",
+  "textClasses": {
+    "title": {
+      "fontFace": "Segoe UI Semibold",
+      "fontSize": 12,
+      "color": "#1B2A3A"
+    },
+    "header": {
+      "fontFace": "Segoe UI Semibold",
+      "fontSize": 11,
+      "color": "#1B2A3A"
+    },
+    "label": {
+      "fontFace": "Segoe UI",
+      "fontSize": 10,
+      "color": "#5E6A71"
+    },
+    "callout": {
+      "fontFace": "Segoe UI Semibold",
+      "fontSize": 26,
+      "color": "#1B2A3A"
+    }
+  },
+  "visualStyles": {
+    "*": {
+      "*": {
+        "background": [
+          {
+            "show": true,
+            "color": {
+              "solid": {
+                "color": "#FFFFFF"
+              }
+            },
+            "transparency": 0
+          }
+        ],
+        "border": [
+          {
+            "show": true,
+            "color": {
+              "solid": {
+                "color": "#E3E9ED"
+              }
+            },
+            "radius": 8
+          }
+        ],
+        "dropShadow": [
+          {
+            "show": false
+          }
+        ],
+        "visualHeader": [
+          {
+            "show": true
+          }
+        ],
+        "padding": [
+          {
+            "top": 10,
+            "bottom": 10,
+            "left": 12,
+            "right": 12
+          }
+        ],
+        "title": [
+          {
+            "show": true,
+            "fontSize": 12,
+            "fontColor": {
+              "solid": {
+                "color": "#1B2A3A"
+              }
+            },
+            "alignment": "left"
+          }
+        ]
+      }
+    },
+    "page": {
+      "*": {
+        "background": [
+          {
+            "color": {
+              "solid": {
+                "color": "#F4F7F9"
+              }
+            },
+            "transparency": 0
+          }
+        ],
+        "outspace": [
+          {
+            "color": {
+              "solid": {
+                "color": "#F4F7F9"
+              }
+            }
+          }
+        ]
+      }
+    },
+    "card": {
+      "*": {
+        "labels": [
+          {
+            "fontSize": 26,
+            "color": {
+              "solid": {
+                "color": "#1B2A3A"
+              }
+            }
+          }
+        ],
+        "categoryLabels": [
+          {
+            "show": true,
+            "fontSize": 10,
+            "color": {
+              "solid": {
+                "color": "#5E6A71"
+              }
+            }
+          }
+        ],
+        "accentBar": [
+          {
+            "show": true,
+            "position": "Left",
+            "width": 4,
+            "color": {
+              "solid": {
+                "color": "#000075"
+              }
+            }
+          }
+        ]
+      }
+    },
+    "slicer": {
+      "*": {
+        "header": [
+          {
+            "fontSize": 10,
+            "fontColor": {
+              "solid": {
+                "color": "#5E6A71"
+              }
+            }
+          }
+        ],
+        "items": [
+          {
+            "fontSize": 10,
+            "fontColor": {
+              "solid": {
+                "color": "#1B2A3A"
+              }
+            }
+          }
+        ]
+      }
+    },
+    "tableEx": {
+      "*": {
+        "columnHeaders": [
+          {
+            "backColor": {
+              "solid": {
+                "color": "#000075"
+              }
+            },
+            "fontColor": {
+              "solid": {
+                "color": "#FFFFFF"
+              }
+            },
+            "fontSize": 10
+          }
+        ],
+        "values": [
+          {
+            "fontSize": 10,
+            "backColorSecondary": {
+              "solid": {
+                "color": "#F4F7F9"
+              }
+            }
+          }
+        ],
+        "total": [
+          {
+            "backColor": {
+              "solid": {
+                "color": "#E3F4FB"
+              }
+            },
+            "fontColor": {
+              "solid": {
+                "color": "#1B2A3A"
+              }
+            }
+          }
+        ],
+        "grid": [
+          {
+            "gridHorizontal": true,
+            "gridHorizontalColor": {
+              "solid": {
+                "color": "#E3E9ED"
+              }
+            },
+            "gridVertical": false
+          }
+        ]
+      }
+    },
+    "pivotTable": {
+      "*": {
+        "columnHeaders": [
+          {
+            "backColor": {
+              "solid": {
+                "color": "#000075"
+              }
+            },
+            "fontColor": {
+              "solid": {
+                "color": "#FFFFFF"
+              }
+            },
+            "fontSize": 10
+          }
+        ],
+        "rowHeaders": [
+          {
+            "fontSize": 10
+          }
+        ],
+        "values": [
+          {
+            "fontSize": 10,
+            "backColorSecondary": {
+              "solid": {
+                "color": "#F4F7F9"
+              }
+            }
+          }
+        ],
+        "total": [
+          {
+            "backColor": {
+              "solid": {
+                "color": "#E3F4FB"
+              }
+            }
+          }
+        ]
+      }
+    },
+    "lineChart": {
+      "*": {
+        "lineStyles": [
+          {
+            "strokeWidth": 3,
+            "showMarker": true,
+            "markerSize": 4
+          }
+        ],
+        "labels": [
+          {
+            "show": true,
+            "fontSize": 9
+          }
+        ]
+      }
+    },
+    "clusteredBarChart": {
+      "*": {
+        "labels": [
+          {
+            "show": true,
+            "fontSize": 9
+          }
+        ]
+      }
+    },
+    "clusteredColumnChart": {
+      "*": {
+        "labels": [
+          {
+            "show": true,
+            "fontSize": 9
+          }
+        ]
+      }
+    },
+    "donutChart": {
+      "*": {
+        "labels": [
+          {
+            "show": true,
+            "labelStyle": "Percent of total",
+            "fontSize": 10
+          }
+        ]
+      }
+    }
+  }
+}

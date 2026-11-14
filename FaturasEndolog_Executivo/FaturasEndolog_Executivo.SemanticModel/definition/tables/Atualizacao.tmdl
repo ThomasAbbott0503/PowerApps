@@ -1,0 +1,18 @@
+table Atualizacao
+	isHidden
+
+	column Data
+		dataType: dateTime
+		formatString: General Date
+		summarizeBy: none
+		sourceColumn: Data
+
+	partition Atualizacao = m
+		mode: import
+		source =
+				let
+				    Fonte = #table(type table [Data = datetime], {{DateTime.LocalNow()}})
+				in
+				    Fonte
+
+	annotation PBI_ResultType = Table

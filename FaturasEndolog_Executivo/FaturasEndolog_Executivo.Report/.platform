@@ -1,0 +1,11 @@
+{
+  "$schema": "https://developer.microsoft.com/json-schemas/fabric/gitIntegration/platformProperties/2.0.0/schema.json",
+  "metadata": {
+    "type": "Report",
+    "displayName": "FaturasEndolog_Executivo"
+  },
+  "config": {
+    "version": "2.0",
+    "logicalId": "c75f2481-4a2c-451a-a52a-4409c3bdce2d"
+  }
+}

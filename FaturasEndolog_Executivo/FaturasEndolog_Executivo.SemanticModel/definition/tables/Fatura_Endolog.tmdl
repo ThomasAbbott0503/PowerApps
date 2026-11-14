@@ -1,0 +1,110 @@
+table Fatura_Endolog
+
+	measure VALORREAL = SUM ( Fatura_Endolog[COBRADO] )
+		formatString: "R$"\ #,0;-"R$"\ #,0;"R$"\ #,0
+
+	measure VALORDOLAR = SUMX ( VALUES ( dDATAS[Data] ), DIVIDE ( [VALORREAL], CALCULATE ( MAX ( dDATAS[PTAX] ) ) ) )
+		formatString: "US$"\ #,0;-"US$"\ #,0;"US$"\ #,0
+
+	measure tpmoeda = IF ( SELECTEDVALUE ( TipoMoeda[Moeda], "Real" ) = "Real", [VALORREAL], [VALORDOLAR] )
+		formatString: "R$"\ #,0;-"R$"\ #,0;"R$"\ #,0
+		formatStringDefinition = IF ( SELECTEDVALUE ( TipoMoeda[Moeda], "Real" ) = "Real", """R$"" #,0", """US$"" #,0" )
+
+	measure 'Qtde Serviços Endolog' = SUM ( Fatura_Endolog[QTDE] )
+		formatString: #,0
+
+	measure 'Preço Médio Endolog' = DIVIDE ( [VALORREAL], [Qtde Serviços Endolog] )
+		formatString: "R$"\ #,0.00;-"R$"\ #,0.00;"R$"\ #,0.00
+
+	measure 'Valor Mês Anterior Endolog' = VAR _d = MAX ( dDATAS[Data] ) RETURN CALCULATE ( [VALORREAL], REMOVEFILTERS ( dDATAS ), dDATAS[Data] = EDATE ( _d, -1 ) )
+		formatString: "R$"\ #,0;-"R$"\ #,0;"R$"\ #,0
+
+	measure 'Var % Mês Endolog' = VAR _a = [Valor Mês Anterior Endolog] RETURN IF ( NOT ISBLANK ( _a ), DIVIDE ( [VALORREAL] - _a, _a ) )
+		formatString: +0.0%;-0.0%;0.0%
+
+	measure 'Acumulado Ano Endolog' = VAR _d = MAX ( dDATAS[Data] ) RETURN CALCULATE ( [VALORREAL], REMOVEFILTERS ( dDATAS ), dDATAS[Ano] = YEAR ( _d ), dDATAS[Data] <= _d )
+		formatString: "R$"\ #,0;-"R$"\ #,0;"R$"\ #,0
+
+	measure 'Total Faturado' = [VALORREAL] + [valorreallog]
+		formatString: "R$"\ #,0;-"R$"\ #,0;"R$"\ #,0
+
+	measure 'Total Faturado Moeda' = [tpmoeda] + [tpmoedalog]
+		formatString: "R$"\ #,0;-"R$"\ #,0;"R$"\ #,0
+		formatStringDefinition = IF ( SELECTEDVALUE ( TipoMoeda[Moeda], "Real" ) = "Real", """R$"" #,0", """US$"" #,0" )
+
+	measure 'Peso Endolog %' = DIVIDE ( [VALORREAL], [Total Faturado] )
+		formatString: 0.0%
+
+	measure 'Período Selecionado' = VAR _i = MIN ( dDATAS[Data] ) VAR _f = MAX ( dDATAS[Data] ) RETURN "Período: " & FORMAT ( _i, "mmm/yy" ) & " a " & FORMAT ( _f, "mmm/yy" )
+
+	measure 'Última Atualização' = "Atualizado em " & FORMAT ( MAX ( Atualizacao[Data] ), "dd/mm/yyyy hh:mm" )
+
+	measure 'Cabeçalho Info' = [Período Selecionado] & "   |   " & [Última Atualização]
+
+	column FILIAL
+		dataType: string
+		summarizeBy: none
+		sourceColumn: FILIAL
+
+	column BU
+		dataType: string
+		summarizeBy: none
+		sourceColumn: BU
+
+	column 'TIPO DE SERVIÇO'
+		dataType: string
+		summarizeBy: none
+		sourceColumn: TIPO DE SERVIÇO
+
+	column QTDE
+		dataType: int64
+		formatString: #,0
+		summarizeBy: none
+		sourceColumn: QTDE
+
+	column PREÇO
+		dataType: decimal
+		formatString: "R$"\ #,0.00;-"R$"\ #,0.00;"R$"\ #,0.00
+		summarizeBy: none
+		sourceColumn: PREÇO
+
+	column COBRADO
+		dataType: decimal
+		formatString: "R$"\ #,0;-"R$"\ #,0;"R$"\ #,0
+		summarizeBy: none
+		sourceColumn: COBRADO
+
+	column MÊS
+		dataType: string
+		summarizeBy: none
+		sourceColumn: MÊS
+
+	column TÍTULO
+		dataType: string
+		summarizeBy: none
+		sourceColumn: TÍTULO
+
+	column ANO
+		dataType: string
+		summarizeBy: none
+		sourceColumn: ANO
+
+	column DataRef
+		dataType: dateTime
+		formatString: Short Date
+		summarizeBy: none
+		sourceColumn: DataRef
+
+	partition Fatura_Endolog = m
+		mode: import
+		source =
+				let
+				    Fonte = Table.Combine({FRETES, Serviços}),
+				    ComData = fxDataReferencia(Fonte, "MÊS", "ANO"),
+				    Limpo = Table.TransformColumns(ComData, {{"FILIAL", each Text.Upper(Text.Trim(Text.From(_))), type text}, {"BU", each Text.Trim(Text.From(_)), type text}}),
+				    SemNulos = Table.ReplaceValue(Limpo, null, 0, Replacer.ReplaceValue, {"QTDE", "COBRADO"}),
+				    Tipos = Table.TransformColumnTypes(SemNulos, {{"QTDE", Int64.Type}})
+				in
+				    Tipos
+
+	annotation PBI_ResultType = Table

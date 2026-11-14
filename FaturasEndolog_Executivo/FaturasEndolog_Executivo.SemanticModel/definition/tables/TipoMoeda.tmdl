@@ -1,0 +1,16 @@
+table TipoMoeda
+
+	column Moeda
+		dataType: string
+		summarizeBy: none
+		sourceColumn: Moeda
+
+	partition TipoMoeda = m
+		mode: import
+		source =
+				let
+				    Fonte = #table(type table [Moeda = text], {{"Real"}, {"Dolar"}})
+				in
+				    Fonte
+
+	annotation PBI_ResultType = Table

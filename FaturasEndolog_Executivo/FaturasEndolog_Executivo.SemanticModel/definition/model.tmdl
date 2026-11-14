@@ -1,0 +1,22 @@
+model Model
+	culture: pt-BR
+	defaultPowerBIDataSourceVersion: powerBI_V3
+	sourceQueryCulture: pt-BR
+	dataAccessOptions
+		legacyRedirects
+		returnErrorValuesAsNull
+
+queryGroup 'Funções e consultas auxiliares'
+
+annotation PBI_QueryOrder = ["pTaxaDolarPadrao", "PastaFaturas", "fxLerAba", "fxNumero", "fxMes", "fxDataReferencia", "Cambio", "FRETES", "Serviços", "Fatura_Endolog", "LOGMED_armazenagem", "LOGMED_atendimento", "LOGMED-Serviços", "dDATAS", "FILIAISENDOLOG", "TipoMoeda", "Atualizacao"]
+
+annotation __PBI_TimeIntelligenceEnabled = 0
+
+ref table Fatura_Endolog
+ref table 'LOGMED-Serviços'
+ref table dDATAS
+ref table FILIAISENDOLOG
+ref table TipoMoeda
+ref table Atualizacao
+
+ref cultureInfo pt-BR

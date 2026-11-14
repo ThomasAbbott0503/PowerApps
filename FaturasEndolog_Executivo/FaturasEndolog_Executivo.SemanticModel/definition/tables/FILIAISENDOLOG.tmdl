@@ -1,0 +1,18 @@
+table FILIAISENDOLOG
+
+	column FILIAL
+		dataType: string
+		summarizeBy: none
+		sourceColumn: FILIAL
+
+	partition FILIAISENDOLOG = m
+		mode: import
+		source =
+				let
+				    Lista = List.Distinct(List.Combine({Fatura_Endolog[FILIAL], #"LOGMED-Serviços"[FILIAL]})),
+				    SemNulo = List.Sort(List.RemoveNulls(List.Select(Lista, each _ <> ""))),
+				    Tabela = Table.FromList(SemNulo, Splitter.SplitByNothing(), type table [FILIAL = text])
+				in
+				    Tabela
+
+	annotation PBI_ResultType = Table

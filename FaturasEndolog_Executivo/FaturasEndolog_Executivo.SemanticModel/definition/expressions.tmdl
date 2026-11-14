@@ -1,0 +1,127 @@
+expression pTaxaDolarPadrao = 5.5 meta [IsParameterQuery=true, Type="Number", IsParameterQueryRequired=true]
+	queryGroup: 'Funções e consultas auxiliares'
+	annotation PBI_ResultType = Number
+
+expression PastaFaturas =
+		let
+		    Fonte = SharePoint.Files("https://abbott.sharepoint.com/sites/BR-MD-SUPPLYCHAINFAT/", [ApiVersion = 15]),
+		    Pasta = Table.SelectRows(Fonte, each Text.Contains([Folder Path], "BI-FATURAS BU LASTMILES")),
+		    Colunas = Table.SelectColumns(Pasta, {"Name", "Content", "Date modified"})
+		in
+		    Colunas
+	queryGroup: 'Funções e consultas auxiliares'
+	annotation PBI_ResultType = Table
+
+expression fxLerAba =
+		(NomeArquivo as text, Aba as text) as table =>
+		let
+		    Arquivo = PastaFaturas{[Name = NomeArquivo]}[Content],
+		    Livro = Excel.Workbook(Arquivo, null, true),
+		    Planilha = Livro{[Item = Aba, Kind = "Sheet"]}[Data],
+		    ComCabecalho = Table.PromoteHeaders(Planilha, [PromoteAllScalars = true]),
+		    SemVazias = Table.SelectRows(ComCabecalho, each not List.IsEmpty(List.RemoveMatchingItems(Record.FieldValues(_), {"", null})))
+		in
+		    SemVazias
+	queryGroup: 'Funções e consultas auxiliares'
+	annotation PBI_ResultType = Function
+
+expression fxNumero =
+		(v as any) as nullable number =>
+		let
+		    r = if v = null then null
+		        else if Value.Is(v, type number) then v
+		        else
+		            let
+		                t = Text.Trim(Text.Replace(Text.Replace(Text.From(v), "R$", ""), " ", "")),
+		                pct = Text.EndsWith(t, "%"),
+		                n = try Number.FromText(Text.Replace(Text.Replace(Text.TrimEnd(t, "%"), ".", ""), ",", ".")) otherwise null
+		            in
+		                if n = null then null else if pct then n / 100 else n
+		in
+		    r
+	queryGroup: 'Funções e consultas auxiliares'
+	annotation PBI_ResultType = Function
+
+expression fxMes =
+		(v as any) as nullable text =>
+		let
+		    t = if v = null then null else Text.Proper(Text.Trim(Text.From(v))),
+		    mapa = [Jan = "Janeiro", Jeneiro = "Janeiro", Fev = "Fevereiro", Mar = "Março", Marco = "Março", Abr = "Abril", Mai = "Maio", Jun = "Junho", Jul = "Julho", Ago = "Agosto", Set = "Setembro", Out = "Outubro", Nov = "Novembro", Dez = "Dezembro"]
+		in
+		    if t = null then null else Record.FieldOrDefault(mapa, t, t)
+	queryGroup: 'Funções e consultas auxiliares'
+	annotation PBI_ResultType = Function
+
+expression fxDataReferencia =
+		(Tabela as table, ColMes as text, ColAno as text) as table =>
+		let
+		    Meses = {"Janeiro","Fevereiro","Março","Abril","Maio","Junho","Julho","Agosto","Setembro","Outubro","Novembro","Dezembro"},
+		    MesPadrao = Table.TransformColumns(Tabela, {{ColMes, fxMes, type text}}),
+		    AnoTexto = Table.TransformColumns(MesPadrao, {{ColAno, each try Text.From(Int64.From(_)) otherwise null, type text}}),
+		    ComData = Table.AddColumn(AnoTexto, "DataRef", each
+		        let m = List.PositionOf(Meses, Record.Field(_, ColMes)) + 1,
+		            a = try Int64.From(Record.Field(_, ColAno)) otherwise null
+		        in if m > 0 and a <> null then #date(a, m, 1) else null, type date)
+		in
+		    ComData
+	queryGroup: 'Funções e consultas auxiliares'
+	annotation PBI_ResultType = Function
+
+expression Cambio =
+		let
+		    Inicio = "01-01-2020",
+		    Fim = Date.ToText(Date.From(DateTime.LocalNow()), "MM-dd-yyyy"),
+		    Url = "https://olinda.bcb.gov.br/olinda/servico/PTAX/versao/v1/odata/CotacaoDolarPeriodo(dataInicial=@dataInicial,dataFinalCotacao=@dataFinalCotacao)?@dataInicial='" & Inicio & "'&@dataFinalCotacao='" & Fim & "'&$format=json&$select=cotacaoVenda,dataHoraCotacao",
+		    Tentativa = try
+		        let
+		            Json = Json.Document(Web.Contents(Url)),
+		            Tab = Table.FromRecords(Json[value]),
+		            ComMes = Table.AddColumn(Tab, "Data", each Date.StartOfMonth(Date.From(DateTime.FromText(Text.Start([dataHoraCotacao], 19)))), type date),
+		            Media = Table.Group(ComMes, {"Data"}, {{"PTAX", each List.Average([cotacaoVenda]), type number}})
+		        in
+		            Media
+		    otherwise #table(type table [Data = date, PTAX = number], {})
+		in
+		    Tentativa
+	queryGroup: 'Funções e consultas auxiliares'
+	annotation PBI_ResultType = Table
+
+expression FRETES =
+		let
+		    Fonte = fxLerAba("Base Unificada Fretes Endolog.xlsx", "Resumo unificado"),
+		    Numeros = Table.TransformColumns(Fonte, {{"QTDE", fxNumero, type number}, {"PREÇO", fxNumero, Currency.Type}, {"COBRADO", fxNumero, Currency.Type}}),
+		    Tipos = Table.TransformColumnTypes(Numeros, {{"FILIAL", type text}, {"BU", type text}, {"TIPO DE SERVIÇO", type text}, {"MÊS", type text}, {"TÍTULO", type text}, {"ANO", type text}})
+		in
+		    Tipos
+	queryGroup: 'Funções e consultas auxiliares'
+	annotation PBI_ResultType = Table
+
+expression Serviços =
+		let
+		    Fonte = fxLerAba("Base Unificada Serviços Endolog.xlsx", "Resumo unificado"),
+		    Numeros = Table.TransformColumns(Fonte, {{"QTDE", fxNumero, type number}, {"PREÇO", fxNumero, Currency.Type}, {"COBRADO", fxNumero, Currency.Type}}),
+		    Tipos = Table.TransformColumnTypes(Numeros, {{"FILIAL", type text}, {"BU", type text}, {"TIPO DE SERVIÇO", type text}, {"MÊS", type text}, {"TÍTULO", type text}, {"ANO", type text}})
+		in
+		    Tipos
+	queryGroup: 'Funções e consultas auxiliares'
+	annotation PBI_ResultType = Table
+
+expression LOGMED_armazenagem =
+		let
+		    Fonte = fxLerAba("Faturas_LOGMED.xlsx", "Armazenagem"),
+		    Numeros = Table.TransformColumns(Fonte, {{"Quantidade", fxNumero, type number}, {"Valor", fxNumero, Currency.Type}, {"Total", fxNumero, Currency.Type}}),
+		    Tipos = Table.TransformColumnTypes(Numeros, {{"SERVIÇO", type text}, {"MÊS", type text}, {"FILIAL", type text}, {"BU", type text}, {"TÍTULO", type text}, {"ANO", type text}})
+		in
+		    Tipos
+	queryGroup: 'Funções e consultas auxiliares'
+	annotation PBI_ResultType = Table
+
+expression LOGMED_atendimento =
+		let
+		    Fonte = fxLerAba("Faturas_LOGMED.xlsx", "atendimentos"),
+		    Numeros = Table.TransformColumns(Fonte, {{"Quantidade", fxNumero, type number}, {"Valor", fxNumero, Currency.Type}, {"Total", fxNumero, Currency.Type}}),
+		    Tipos = Table.TransformColumnTypes(Numeros, {{"SERVIÇO", type text}, {"MÊS", type text}, {"FILIAL", type text}, {"BU", type text}, {"TÍTULO", type text}, {"ANO", type text}})
+		in
+		    Tipos
+	queryGroup: 'Funções e consultas auxiliares'
+	annotation PBI_ResultType = Table

@@ -1,0 +1,73 @@
+table dDATAS
+
+	dataCategory: Time
+
+	column Data
+		dataType: dateTime
+		formatString: Short Date
+		summarizeBy: none
+		sourceColumn: Data
+
+	column Ano
+		dataType: int64
+		formatString: 0
+		summarizeBy: none
+		sourceColumn: Ano
+
+	column Mês
+		dataType: int64
+		formatString: 0
+		summarizeBy: none
+		sourceColumn: Mês
+
+	column NomeMês
+		dataType: string
+		summarizeBy: none
+		sourceColumn: NomeMês
+		sortByColumn: Mês
+
+	column AnoMês
+		dataType: string
+		summarizeBy: none
+		sourceColumn: AnoMês
+
+	column MêsAno
+		dataType: string
+		summarizeBy: none
+		sourceColumn: MêsAno
+		sortByColumn: Data
+
+	column Trimestre
+		dataType: string
+		summarizeBy: none
+		sourceColumn: Trimestre
+
+	column PTAX
+		dataType: double
+		formatString: 0.0000
+		summarizeBy: none
+		sourceColumn: PTAX
+
+	partition dDATAS = m
+		mode: import
+		source =
+				let
+				    Inicio = #date(2020, 1, 1),
+				    Fim = Date.EndOfYear(Date.From(DateTime.LocalNow())),
+				    QtdMeses = (Date.Year(Fim) - Date.Year(Inicio)) * 12 + Date.Month(Fim),
+				    Lista = List.Transform({0 .. QtdMeses - 1}, each Date.AddMonths(Inicio, _)),
+				    Base = Table.FromList(Lista, Splitter.SplitByNothing(), type table [Data = date]),
+				    Meses = {"Janeiro","Fevereiro","Março","Abril","Maio","Junho","Julho","Agosto","Setembro","Outubro","Novembro","Dezembro"},
+				    Ano = Table.AddColumn(Base, "Ano", each Date.Year([Data]), Int64.Type),
+				    Mes = Table.AddColumn(Ano, "Mês", each Date.Month([Data]), Int64.Type),
+				    Nome = Table.AddColumn(Mes, "NomeMês", each Meses{[Mês] - 1}, type text),
+				    AnoMes = Table.AddColumn(Nome, "AnoMês", each Text.From([Ano]) & "-" & Text.PadStart(Text.From([Mês]), 2, "0"), type text),
+				    Rotulo = Table.AddColumn(AnoMes, "MêsAno", each Text.Lower(Text.Start([NomeMês], 3)) & "/" & Text.End(Text.From([Ano]), 2), type text),
+				    Tri = Table.AddColumn(Rotulo, "Trimestre", each "T" & Text.From(Date.QuarterOfYear([Data])), type text),
+				    ComPtax = Table.NestedJoin(Tri, {"Data"}, Cambio, {"Data"}, "c", JoinKind.LeftOuter),
+				    Ptax = Table.AddColumn(ComPtax, "PTAX", each let v = try [c]{0}[PTAX] otherwise null in if v = null then pTaxaDolarPadrao else v, type number),
+				    Final = Table.RemoveColumns(Ptax, {"c"})
+				in
+				    Final
+
+	annotation PBI_ResultType = Table
