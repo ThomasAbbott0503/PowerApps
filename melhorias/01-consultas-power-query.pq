@@ -56,7 +56,7 @@ in
 let
     Meses = {"Janeiro","Fevereiro","Março","Abril","Maio","Junho",
              "Julho","Agosto","Setembro","Outubro","Novembro","Dezembro"},
-    MesPadrao = Table.TransformColumns(Tabela, {{ColMes, each Text.Proper(Text.Trim(Text.From(_))), type text}}),
+    MesPadrao = Table.TransformColumns(Tabela, {{ColMes, fxMes, type text}}),
     AnoNumero = Table.TransformColumns(MesPadrao, {{ColAno, each try Int64.From(_) otherwise null, Int64.Type}}),
     ComData = Table.AddColumn(AnoNumero, "DataRef", each
         let
@@ -67,6 +67,42 @@ let
         type date)
 in
     ComData
+
+
+// ---------------------------------------------------------------------
+// 4b) fxNumero  [NOVA FUNÇÃO — NÃO CARREGAR]
+//     Converte valores digitados como TEXTO (" R$ 5.130,00", "0,10%")
+//     em número. Sem isso, essas células viram ERRO e somem do
+//     relatório (foi o que escondeu setembro no LOGMED).
+// ---------------------------------------------------------------------
+(v as any) as nullable number =>
+let
+    r = if v = null then null
+        else if Value.Is(v, type number) then v
+        else
+            let
+                t  = Text.Trim(Text.Replace(Text.Replace(Text.From(v), "R$", ""), " ", "")),
+                pct = Text.EndsWith(t, "%"),
+                n  = try Number.FromText(Text.Replace(Text.Replace(Text.TrimEnd(t, "%"), ".", ""), ",", ".")) otherwise null
+            in
+                if n = null then null else if pct then n / 100 else n
+in
+    r
+
+
+// ---------------------------------------------------------------------
+// 4c) fxMes  [NOVA FUNÇÃO — NÃO CARREGAR]
+//     Padroniza o nome do mês: "SETEMBRO", "setembro ", "Set" e o erro
+//     de digitação "Jeneiro" viram "Setembro" / "Janeiro".
+// ---------------------------------------------------------------------
+(v as any) as nullable text =>
+let
+    t = if v = null then null else Text.Proper(Text.Trim(Text.From(v))),
+    mapa = [Jan = "Janeiro", Jeneiro = "Janeiro", Fev = "Fevereiro", Mar = "Março", Marco = "Março",
+            Abr = "Abril", Mai = "Maio", Jun = "Junho", Jul = "Julho", Ago = "Agosto",
+            Set = "Setembro", Out = "Outubro", Nov = "Novembro", Dez = "Dezembro"]
+in
+    if t = null then null else Record.FieldOrDefault(mapa, t, t)
 
 
 // ---------------------------------------------------------------------
@@ -114,27 +150,32 @@ in
 
 // ---------------------------------------------------------------------
 // 8) LOGMED_armazenagem  [NÃO CARREGAR]
+//    Valor/Total/Quantidade passam por fxNumero: células digitadas
+//    como texto ("R$ 5.130,00") não viram mais erro.
 // ---------------------------------------------------------------------
 let
-    Fonte = fxLerAba("Faturas_LOGMED.xlsx", "Armazenagem"),
-    Tipos = Table.TransformColumnTypes(Fonte, {
-        {"SERVIÇO", type text}, {"Quantidade", type number}, {"Valor", Currency.Type},
-        {"Total", Currency.Type}, {"MÊS", type text}, {"FILIAL", type text},
-        {"BU", type text}, {"TÍTULO", type text}, {"ANO", type text}})
+    Fonte  = fxLerAba("Faturas_LOGMED.xlsx", "Armazenagem"),
+    Numeros = Table.TransformColumns(Fonte, {
+        {"Quantidade", fxNumero, type number}, {"Valor", fxNumero, Currency.Type}, {"Total", fxNumero, Currency.Type}}),
+    Mes    = Table.TransformColumns(Numeros, {{"MÊS", fxMes, type text}}),
+    Tipos  = Table.TransformColumnTypes(Mes, {
+        {"SERVIÇO", type text}, {"FILIAL", type text}, {"BU", type text}, {"TÍTULO", type text}, {"ANO", type text}})
 in
     Tipos
 
 
 // ---------------------------------------------------------------------
 // 9) LOGMED_atendimento  [NÃO CARREGAR]
-//    Antes "Quantidade" vinha como TEXTO aqui. Corrigido.
+//    Idem. A linha "Seguro de Armazenagem" tem Quantidade "0,10%":
+//    vira 0,001 (número) em vez de erro.
 // ---------------------------------------------------------------------
 let
-    Fonte = fxLerAba("Faturas_LOGMED.xlsx", "atendimentos"),
-    Tipos = Table.TransformColumnTypes(Fonte, {
-        {"SERVIÇO", type text}, {"Quantidade", type number}, {"Valor", Currency.Type},
-        {"Total", Currency.Type}, {"MÊS", type text}, {"FILIAL", type text},
-        {"BU", type text}, {"TÍTULO", type text}, {"ANO", type text}})
+    Fonte  = fxLerAba("Faturas_LOGMED.xlsx", "atendimentos"),
+    Numeros = Table.TransformColumns(Fonte, {
+        {"Quantidade", fxNumero, type number}, {"Valor", fxNumero, Currency.Type}, {"Total", fxNumero, Currency.Type}}),
+    Mes    = Table.TransformColumns(Numeros, {{"MÊS", fxMes, type text}}),
+    Tipos  = Table.TransformColumnTypes(Mes, {
+        {"SERVIÇO", type text}, {"FILIAL", type text}, {"BU", type text}, {"TÍTULO", type text}, {"ANO", type text}})
 in
     Tipos
 
@@ -146,10 +187,9 @@ let
     Fonte    = Table.Combine({LOGMED_armazenagem, LOGMED_atendimento}),
     ComData  = fxDataReferencia(Fonte, "MÊS", "ANO"),
     Limpo    = Table.TransformColumns(ComData, {{"FILIAL", each Text.Upper(Text.Trim(_)), type text}}),
-    SemNulos = Table.ReplaceValue(Limpo, null, 0, Replacer.ReplaceValue, {"Quantidade", "Total"}),
-    Tipos    = Table.TransformColumnTypes(SemNulos, {{"Quantidade", Int64.Type}})
+    SemNulos = Table.ReplaceValue(Limpo, null, 0, Replacer.ReplaceValue, {"Quantidade", "Total"})
 in
-    Tipos
+    SemNulos
 
 
 // ---------------------------------------------------------------------

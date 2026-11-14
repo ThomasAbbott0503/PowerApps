@@ -34,6 +34,8 @@ A lógica atual foi mantida: as mesmas tabelas, as mesmas fontes no SharePoint, 
 | 5 | `ANO` texto × tabela `Ano` número; LOGMED sem relação de ano | Ano vem de `dDATAS[Ano]` para as duas tabelas |
 | 6 | `VALORDOLAR` formatada como R$ | Formato US$ |
 | 7 | `Quantidade` como **texto** no LOGMED_atendimento | Número |
+| 7b | **Valores digitados como texto** na Faturas_LOGMED (" R$ 5.130,00", "0,10%") viravam erro e sumiam. É o motivo de **setembro/2026** não aparecer no LOGMED (8 linhas afetadas; mai/26 tem 24, jan/26 9, jun/26 9, abr/26 8, ago/26 6) | Função `fxNumero` converte o texto em número |
+| 7c | Mês digitado errado: "SETEMBRO", "JULHO", "Jeneiro" | Função `fxMes` padroniza |
 | 8 | Filiais digitadas à mão (RJ, MG, SP, DF) | Lista automática a partir dos dados |
 | 9 | `SharePoint.Files` listava o site inteiro 5× | Uma consulta-base `PastaFaturas` + função `fxLerAba` |
 | 10 | Tabelas intermediárias carregadas (dados duplicados) | FRETES, Serviços, LOGMED_* com "Habilitar carga" desligado |
@@ -50,9 +52,9 @@ A lógica atual foi mantida: as mesmas tabelas, as mesmas fontes no SharePoint, 
 2. **Tema:** Exibir → Temas → Procurar temas → `tema-abbott.json`.
 3. **Power Query** (Transformar dados):
    1. Crie o parâmetro `pTaxaDolarPadrao` (Decimal, 5.5).
-   2. Crie as consultas novas `PastaFaturas`, `fxLerAba`, `fxDataReferencia`, `Cambio` (Nova fonte → Consulta nula → Editor Avançado → colar).
+   2. Crie as consultas novas `PastaFaturas`, `fxLerAba`, `fxDataReferencia`, `fxNumero`, `fxMes`, `Cambio` (Nova fonte → Consulta nula → Editor Avançado → colar).
    3. Substitua o código de `FRETES`, `Serviços`, `Fatura_Endolog`, `LOGMED_armazenagem`, `LOGMED_atendimento`, `LOGMED-Serviços`, `dDATAS`, `FILIAISENDOLOG`.
-   4. Desligue "Habilitar carga" em: `PastaFaturas`, `FRETES`, `Serviços`, `LOGMED_armazenagem`, `LOGMED_atendimento`, `Cambio`.
+   4. Desligue "Habilitar carga" em: `PastaFaturas`, `fxLerAba`, `fxDataReferencia`, `fxNumero`, `fxMes`, `FRETES`, `Serviços`, `LOGMED_armazenagem`, `LOGMED_atendimento`, `Cambio`.
    5. Apague `Ano`, `Armazenagem_Endolog`, `Parâmetro1`, `Arquivo de Amostra`, `Transformar Arquivo`, `Transformar o Arquivo de Exemplo`.
    6. Fechar e Aplicar.
    > Se `PastaFaturas` der erro em `"Shared Documents"`, troque por `"Documentos Compartilhados"`.
