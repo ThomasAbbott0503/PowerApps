@@ -22,6 +22,8 @@ table Fatura_Endolog
 	measure 'Var % Mês Endolog' = VAR _a = [Valor Mês Anterior Endolog] RETURN IF ( NOT ISBLANK ( _a ), DIVIDE ( [VALORREAL] - _a, _a ) )
 		formatString: +0.0%;-0.0%;0.0%
 
+	measure 'Cor Var Endolog' = IF ( [Var % Mês Endolog] > 0, "#D64545", "#2E9E6B" )
+
 	measure 'Acumulado Ano Endolog' = VAR _d = MAX ( dDATAS[Data] ) RETURN CALCULATE ( [VALORREAL], REMOVEFILTERS ( dDATAS ), dDATAS[Ano] = YEAR ( _d ), dDATAS[Data] <= _d )
 		formatString: "R$"\ #,0;-"R$"\ #,0;"R$"\ #,0
 

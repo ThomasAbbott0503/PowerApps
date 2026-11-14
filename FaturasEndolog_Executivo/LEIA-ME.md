@@ -1,25 +1,33 @@
-# FaturasEndolog_Executivo (Projeto do Power BI – .pbip)
+# FaturasEndolog_Executivo
 
-Relatório **completo**: modelo de dados corrigido + visual executivo Abbott já montado.
-O projeto não carrega dados (eles ficam no SharePoint da Abbott), por isso é leve e seguro.
+Relatório **completo**: modelo de dados corrigido + layout executivo Abbott já montado (3 páginas, 1280×720).
+Nenhum dado fica no GitHub: os dados vêm do SharePoint da Abbott quando você atualiza.
 
-## Como abrir (máquina da empresa)
-1. Baixe esta pasta inteira (`Code → Download ZIP` no GitHub) e descompacte.
-2. Abra **`FaturasEndolog_Executivo.pbip`** no Power BI Desktop (versão 2024 ou mais nova).
-3. Clique em **Atualizar**. Na primeira vez:
-   - SharePoint: use a **conta organizacional** (já salva no seu Desktop);
-   - `olinda.bcb.gov.br` (cotação do dólar): escolha **Anônimo**. Se a rede bloquear, o relatório usa o parâmetro `pTaxaDolarPadrao` (5,5) e segue funcionando.
-4. **Arquivo → Salvar como → .pbix** para publicar no Power BI Service como antes.
+## Jeito mais simples: o arquivo .pbit (modelo do Power BI)
+1. Baixe **`FaturasEndolog_Executivo.pbit`** e dê dois cliques (abre no Power BI Desktop).
+2. Ele pede o parâmetro **pTaxaDolarPadrao** (deixe 5,5) e clica em **Carregar**.
+3. Na primeira atualização:
+   - SharePoint: **conta organizacional** (a mesma de sempre);
+   - `olinda.bcb.gov.br` (dólar PTAX): **Anônimo**. Se a rede bloquear, o relatório usa 5,5 e funciona do mesmo jeito.
+4. **Arquivo → Salvar como → .pbix** e publique como antes.
 
-## O que está incluído
-- Tema Abbott, cabeçalho com logo, período e data de atualização.
+## Alternativa: o projeto .pbip (mesmo conteúdo, em arquivos de texto)
+`Code → Download ZIP`, descompacte e abra `FaturasEndolog_Executivo.pbip`. Depois, **Atualizar**.
+
+## O que está montado
+- Cabeçalho Abbott com logo, **período selecionado** e **data da última atualização**.
 - Filtros Ano / Mês / Filial / BU / Título e botão **R$ | US$** em todas as páginas.
-- Cartões: Valor cobrado, Qtde de serviços, Preço médio, Variação vs mês anterior.
-- Evolução mensal por **mês/ano** (jan/26, fev/26…), participação por filial, valor por título, preço médio por tipo, valor por filial e tabela de detalhe.
-- Cost Drive: total consolidado, peso Endolog, acumulado no ano, matrizes e gráfico Endolog + LOGMED por mês.
-- Correções: dólar pelo PTAX mensal, valores digitados como texto (ex.: "R$ 5.130,00") e meses escritos errado ("SETEMBRO", "Jeneiro").
-- As páginas "Saídas Logmed" e "validações" não entraram (usavam tabelas que não existem no modelo e dados de pacientes). Elas continuam no `FaturasEndolog.pbix` original.
+- 4 cartões: Valor cobrado, Qtde de serviços, Preço médio por serviço, Variação vs mês anterior (▲ vermelho / ▼ verde).
+- Evolução mensal por mês/ano (jan/26, fev/26…), participação por filial, valor por título, preço médio por tipo, valor por filial e tabela de detalhe.
+- Cost Drive: total consolidado, peso Endolog, acumulado no ano, matrizes Endolog e LOGMED e gráfico mensal dos dois.
+
+## Correções nos dados (já aplicadas no modelo)
+- Dólar pelo **PTAX médio mensal** do Banco Central (antes era 5,5 fixo).
+- Valores digitados como texto na Faturas_LOGMED ("R$ 5.130,00", "0,10%") viram número (antes viravam erro e sumiam: setembro).
+- Meses escritos errado ("SETEMBRO", "JULHO", "Jeneiro") padronizados.
+- Calendário com mês **e** ano; filiais automáticas; preço médio em vez de soma de preço.
+- As páginas "Saídas Logmed" e "validações" ficaram de fora (tabelas inexistentes no modelo e dados de pacientes). Continuam no `FaturasEndolog.pbix` original.
 
 ## Conferência depois da primeira atualização
-- Sem filtro de BU, Ano = 2026, LOGMED: **Setembro = R$ 365.835,96** e **Outubro = R$ 367.487,68**.
-- Total geral em R$ da página ENDOLOG (sem filtros) deve bater com o relatório antigo.
+- LOGMED, Ano 2026, sem filtro de BU: **Setembro = R$ 365.835,96**, **Outubro = R$ 367.487,68**.
+- Se setembro ainda não aparecer, o arquivo **Faturas_LOGMED.xlsx do SharePoint** não tem as linhas de set/out de 2026 (a "Cópia…xlsm" tem).

@@ -22,6 +22,8 @@ table 'LOGMED-Serviços'
 	measure 'Var % Mês LOGMED' = VAR _a = [Valor Mês Anterior LOGMED] RETURN IF ( NOT ISBLANK ( _a ), DIVIDE ( [valorreallog] - _a, _a ) )
 		formatString: +0.0%;-0.0%;0.0%
 
+	measure 'Cor Var LOGMED' = IF ( [Var % Mês LOGMED] > 0, "#D64545", "#2E9E6B" )
+
 	measure 'Acumulado Ano LOGMED' = VAR _d = MAX ( dDATAS[Data] ) RETURN CALCULATE ( [valorreallog], REMOVEFILTERS ( dDATAS ), dDATAS[Ano] = YEAR ( _d ), dDATAS[Data] <= _d )
 		formatString: "R$"\ #,0;-"R$"\ #,0;"R$"\ #,0
 
